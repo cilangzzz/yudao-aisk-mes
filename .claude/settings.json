@@ -6,7 +6,8 @@
       "Bash(dir \"H:\\\\basePlatform\\\\yudao-aisk-mes\\\\skills\" /b)"
     ],
     "additionalDirectories": [
-      "h:\\basePlatform\\yudao-aisk-mes\\doc"
+      "h:\\basePlatform\\yudao-aisk-mes\\doc",
+      "H:\\Documents\\software-dev-ai-workflow\\1.0-软件开发流程角色agent模型\\研发"
     ]
   }
 }
