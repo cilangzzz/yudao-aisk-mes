@@ -186,6 +186,28 @@ public class MesOperationServiceImpl implements MesOperationService {
         return keyPartBindMapper.selectListByVin(vin);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void reportException(MesExceptionReportReqVO reqVO) {
+        // 1. 校验异常原因不能为空
+        if (reqVO.getExceptionReason() == null || reqVO.getExceptionReason().trim().isEmpty()) {
+            throw exception(EXCEPTION_REASON_REQUIRED);
+        }
+
+        // 2. 创建异常作业记录
+        MesOperationRecordDO record = new MesOperationRecordDO();
+        record.setVin(reqVO.getVin());
+        record.setWorkOrderId(reqVO.getWorkOrderId());
+        record.setOperationId(reqVO.getOperationId());
+        record.setWorkstationId(reqVO.getWorkstationId());
+        record.setStatus(OperationStatusEnum.ABNORMAL.getStatus());
+        record.setStartTime(LocalDateTime.now());
+        record.setRemark("异常上报: " + reqVO.getExceptionReason() +
+                (reqVO.getExceptionDesc() != null ? " - " + reqVO.getExceptionDesc() : ""));
+
+        operationRecordMapper.insert(record);
+    }
+
 
     private MesScanRespVO.VinInfo handleVinScan(String vin, Long workOrderId) {
         MesScanRespVO.VinInfo vinInfo = new MesScanRespVO.VinInfo();

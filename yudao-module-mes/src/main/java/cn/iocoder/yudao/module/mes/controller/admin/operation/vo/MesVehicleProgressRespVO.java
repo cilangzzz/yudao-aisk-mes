@@ -18,6 +18,9 @@ public class MesVehicleProgressRespVO {
     @Schema(description = "工单编号", example = "WO202603250001")
     private String workOrderNo;
 
+    @Schema(description = "产品编码", example = "P202603250001")
+    private String productCode;
+
     @Schema(description = "产品名称", example = "汽车A")
     private String productName;
 
@@ -35,12 +38,15 @@ public class MesVehicleProgressRespVO {
 
     @Data
     @Schema(description = "工序进度信息")
-    public static class OperationProgress {
+    public static class OperationProgressVO {
         @Schema(description = "工序ID", example = "1")
         private Long operationId;
 
         @Schema(description = "工序编码", example = "OP001")
         private String operationCode;
+
+        @Schema(description = "设置操作员名称", example = "1")
+        private String operatorName;
 
         @Schema(description = "工序名称", example = "总装")
         private String operationName;

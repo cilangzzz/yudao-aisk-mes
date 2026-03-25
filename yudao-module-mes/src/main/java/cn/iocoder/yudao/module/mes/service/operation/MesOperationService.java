@@ -78,4 +78,11 @@ public interface MesOperationService {
      */
     List<MesKeyPartBindDO> getKeyPartBindListByVin(String vin);
 
+    /**
+     * 异常上报
+     *
+     * @param reqVO 异常上报请求
+     */
+    void reportException(@Valid MesExceptionReportReqVO reqVO);
+
 }

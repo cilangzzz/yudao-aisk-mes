@@ -1,10 +1,12 @@
 # MES 追溯模块 Skill 文档
 # 生产追溯 + 移动终端模块
+# 需求文档：H:\Documents\software-dev-ai-workflow\5.0-系统模型\mes\车企模型\07-生产追溯模块.md
+# 需求文档：H:\Documents\software-dev-ai-workflow\5.0-系统模型\mes\车企模型\10-移动终端模块.md
 
 skill:
   id: "skill-mes-trace"
   name: "MES Trace Skill"
-  version: "1.0.0"
+  version: "1.1.0"
   module_path: "yudao-module-mes"
   created_at: "2026-03-25"
   updated_at: "2026-03-25"
@@ -141,6 +143,109 @@ architecture:
         purpose: "获取操作员信息，显示操作员姓名"
     mq: []
 
+  # 接口设计（与需求文档对齐）
+  api_design:
+    # 管理后台 - 追溯接口
+    trace_apis:
+      - name: "VIN追溯查询"
+        method: "GET"
+        path: "/mes/trace/vin"
+        description: "按VIN查询车辆完整生产信息"
+        params: "vin: VIN码"
+        response_example: |
+          {
+            "code": 0,
+            "data": {
+              "vin": "LSVAU2180N2123456",
+              "vehicleInfo": {
+                "productCode": "MODEL-Y-001",
+                "productName": "Model Y",
+                "color": "珍珠白",
+                "config": "长续航版",
+                "produceDate": "2026-03-24"
+              },
+              "workOrderInfo": {
+                "orderNo": "WO202603240001",
+                "planQty": 100,
+                "actualQty": 58,
+                "lineName": "总装一线"
+              },
+              "operationRecords": [...],
+              "keyParts": [...],
+              "qualityRecords": [...],
+              "deviceData": [...]
+            }
+          }
+
+      - name: "关键件反向追溯"
+        method: "GET"
+        path: "/mes/trace/part"
+        description: "按关键件SN追溯车辆"
+        params: "partSn: 零部件序列号"
+        response_fields:
+          - "关键件基本信息（零部件编码、名称、序列号、供应商）"
+          - "绑定车辆VIN"
+          - "绑定时间"
+          - "绑定工位"
+          - "操作员"
+
+      - name: "工序作业详情"
+        method: "GET"
+        path: "/mes/trace/operation"
+        description: "查询工序作业详情"
+
+      - name: "操作员作业记录"
+        method: "GET"
+        path: "/mes/trace/operator"
+        description: "查询操作员作业记录"
+
+      - name: "设备数据追溯"
+        method: "GET"
+        path: "/mes/trace/device"
+        description: "查询设备采集数据"
+
+    # 移动端接口
+    mobile_apis:
+      - name: "用户登录"
+        method: "POST"
+        path: "/app/auth/login"
+        description: "用户登录认证"
+
+      - name: "扫码解析"
+        method: "POST"
+        path: "/app/operation/scan"
+        description: "扫码解析并返回作业信息"
+
+      - name: "开始作业"
+        method: "POST"
+        path: "/app/operation/start"
+        description: "开始工序作业"
+
+      - name: "完成作业"
+        method: "PUT"
+        path: "/app/operation/complete"
+        description: "完成工序作业"
+
+      - name: "绑定关键件"
+        method: "POST"
+        path: "/app/operation/bind-part"
+        description: "扫描绑定关键零部件"
+
+      - name: "工单列表"
+        method: "GET"
+        path: "/app/work-order/list"
+        description: "查询工单列表"
+
+      - name: "作业记录"
+        method: "GET"
+        path: "/app/operation/records"
+        description: "查询个人作业记录"
+
+      - name: "异常上报"
+        method: "POST"
+        path: "/app/exception/report"
+        description: "上报作业异常"
+
 # ============================================
 # 第三阶段：数据表设计
 # ============================================
@@ -248,6 +353,39 @@ data_model:
         - { name: "sync_status", type: "TINYINT", comment: "同步状态:0-待同步,1-已同步,2-同步失败" }
         - { name: "sync_time", type: "DATETIME", comment: "同步时间" }
         - { name: "fail_reason", type: "VARCHAR(255)", comment: "同步失败原因" }
+
+  # 离线作业缓存策略（与需求文档对齐）
+  offline_cache_strategy:
+    description: |
+      移动端 UniApp 支持离线作业，断网时缓存数据后续同步：
+      1. 登录时缓存当前工单信息
+      2. 登录时缓存当前工艺路线
+      3. 作业记录本地存储，联网后上传
+      4. 关键件绑定本地存储，联网后上传
+
+    cache_types:
+      - type: "工单信息"
+        strategy: "登录时缓存当前工单"
+        storage: "本地 SQLite"
+      - type: "工艺路线"
+        strategy: "登录时缓存当前工艺路线"
+        storage: "本地 SQLite"
+      - type: "作业记录"
+        strategy: "本地存储，联网后上传"
+        storage: "本地 SQLite -> 服务端"
+      - type: "关键件绑定"
+        strategy: "本地存储，联网后上传"
+        storage: "本地 SQLite -> 服务端"
+
+    sync_mechanism:
+      - step: "检测网络状态"
+        detail: "UniApp 监听网络状态变化事件"
+      - step: "网络恢复后自动上传本地数据"
+        detail: "按时间顺序上传缓存的作业记录和关键件绑定"
+      - step: "服务端校验数据一致性"
+        detail: "检查 VIN、工单、工序关联是否正确"
+      - step: "返回同步结果"
+        detail: "更新 sync_status，记录 sync_time"
 
   # 表关系
   relationships:
@@ -434,12 +572,37 @@ dependencies:
 # 关键文件清单
 # ============================================
 key_files:
+  # SQL 建表脚本
+  - path: "sql/master/mysql/table/create/2026_03_25_mes_operation_record_create.sql"
+    purpose: "作业记录表建表脚本"
+
+  - path: "sql/master/mysql/table/create/2026_03_25_mes_key_part_bind_create.sql"
+    purpose: "关键件绑定表建表脚本"
+
+  - path: "sql/master/mysql/table/create/2026_03_25_mes_scan_record_create.sql"
+    purpose: "扫码记录表建表脚本"
+
+  - path: "sql/master/mysql/table/create/2026_03_25_mes_device_data_create.sql"
+    purpose: "设备采集数据表建表脚本"
+
+  - path: "sql/master/mysql/table/create/2026_03_25_mes_offline_cache_create.sql"
+    purpose: "离线作业缓存表建表脚本"
+
   # 控制器
   - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/controller/admin/trace/MesTraceController.java"
     purpose: "追溯查询接口"
 
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/controller/app/MesMobileAuthController.java"
+    purpose: "移动端认证接口"
+
   - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/controller/app/MesMobileOperationController.java"
     purpose: "移动端作业接口"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/controller/app/MesMobileWorkOrderController.java"
+    purpose: "移动端工单接口"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/controller/app/MesMobileExceptionController.java"
+    purpose: "移动端异常上报接口"
 
   # 服务
   - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/service/trace/MesTraceService.java"
@@ -448,12 +611,42 @@ key_files:
   - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/service/operation/MesOperationService.java"
     purpose: "作业服务接口"
 
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/service/keypart/MesKeyPartService.java"
+    purpose: "关键件服务接口"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/service/offline/MesOfflineService.java"
+    purpose: "离线作业服务接口"
+
   # 数据访问
   - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/dataobject/trace/MesOperationRecordDO.java"
     purpose: "作业记录实体"
 
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/dataobject/trace/MesKeyPartBindDO.java"
+    purpose: "关键件绑定实体"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/dataobject/trace/MesScanRecordDO.java"
+    purpose: "扫码记录实体"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/dataobject/trace/MesDeviceDataDO.java"
+    purpose: "设备采集数据实体"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/dataobject/trace/MesOfflineCacheDO.java"
+    purpose: "离线作业缓存实体"
+
   - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/mysql/trace/MesOperationRecordMapper.java"
     purpose: "作业记录 Mapper"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/mysql/trace/MesKeyPartBindMapper.java"
+    purpose: "关键件绑定 Mapper"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/mysql/trace/MesScanRecordMapper.java"
+    purpose: "扫码记录 Mapper"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/mysql/trace/MesDeviceDataMapper.java"
+    purpose: "设备采集数据 Mapper"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/mysql/trace/MesOfflineCacheMapper.java"
+    purpose: "离线作业缓存 Mapper"
 
   # 枚举
   - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/enums/ErrorCodeConstants.java"
@@ -464,3 +657,9 @@ key_files:
 
   - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/enums/ScanTypeEnum.java"
     purpose: "扫码类型枚举"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/enums/CacheTypeEnum.java"
+    purpose: "离线缓存类型枚举"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/enums/SyncStatusEnum.java"
+    purpose: "同步状态枚举"

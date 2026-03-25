@@ -2,8 +2,14 @@ package cn.iocoder.yudao.module.mes.controller.app;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.module.mes.controller.admin.operation.vo.MesExceptionReportReqVO;
+import cn.iocoder.yudao.module.mes.controller.admin.operation.vo.MesKeyPartBindReqVO;
+import cn.iocoder.yudao.module.mes.controller.admin.operation.vo.MesOperationCompleteReqVO;
+import cn.iocoder.yudao.module.mes.controller.admin.operation.vo.MesOperationStartReqVO;
 import cn.iocoder.yudao.module.mes.controller.admin.operation.vo.MesScanReqVO;
-import cn.iocoder.yudao.module.mes.controller.app.vo.*;
+import cn.iocoder.yudao.module.mes.controller.admin.operation.vo.MesScanRespVO;
+import cn.iocoder.yudao.module.mes.controller.app.vo.MesScanAPPReqVO;
+import cn.iocoder.yudao.module.mes.controller.app.vo.MesScanAppRespVO;
 import cn.iocoder.yudao.module.mes.service.operation.MesOperationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,7 +39,8 @@ public class MesMobileOperationController {
     @Operation(summary = "扫码解析")
     public CommonResult<MesScanAppRespVO> scan(@Valid @RequestBody MesScanAPPReqVO reqAppVO) {
         MesScanReqVO reqVO = BeanUtils.toBean(reqAppVO, MesScanReqVO.class);
-        return success(operationService.scan(reqVO));
+        MesScanRespVO respVO = operationService.scan(reqVO);
+        return success(BeanUtils.toBean(respVO, MesScanAppRespVO.class));
     }
 
     @PostMapping("/operation/start")
@@ -51,9 +58,8 @@ public class MesMobileOperationController {
 
     @PostMapping("/operation/bind-part")
     @Operation(summary = "绑定关键件")
-    public CommonResult<Boolean> bindKeyPart(@Valid @RequestBody MesKeyPartBindReqVO reqVO) {
-        operationService.bindKeyPart(reqVO);
-        return success(true);
+    public CommonResult<Long> bindKeyPart(@Valid @RequestBody MesKeyPartBindReqVO reqVO) {
+        return success(operationService.bindKeyPart(reqVO));
     }
 
     @PostMapping("/exception/report")
