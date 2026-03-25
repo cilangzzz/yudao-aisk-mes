@@ -245,7 +245,7 @@ public class MesOperationAdminServiceImpl implements MesOperationAdminService {
         respVO.setWorkOrderNo(workOrder.getOrderNo());
         respVO.setProductCode(workOrder.getProductCode());
         respVO.setProductName(workOrder.getProductName());
-        respVO.setTotalOperations(allOperations.size());
+        respVO.setTotalCount(allOperations.size());
 
         // 5. 构建工序进度列表
         Map<Long, MesOperationRecordDO> recordMap = records.stream()
@@ -253,7 +253,6 @@ public class MesOperationAdminServiceImpl implements MesOperationAdminService {
 
         List<MesVehicleProgressRespVO.OperationProgressVO> progressList = new ArrayList<>();
         int completedCount = 0;
-        MesVehicleProgressRespVO.OperationProgressVO currentOperation = null;
 
         for (MesOperationDO operation : allOperations) {
             MesVehicleProgressRespVO.OperationProgressVO progress = new MesVehicleProgressRespVO.OperationProgressVO();
@@ -266,27 +265,32 @@ public class MesOperationAdminServiceImpl implements MesOperationAdminService {
             if (record != null) {
                 progress.setStatus(convertToProgressStatus(record.getStatus()));
                 progress.setStatusName(getProgressStatusName(record.getStatus()));
+                progress.setRecordId(record.getId());
+                progress.setCompleted(OperationStatusEnum.COMPLETED.getStatus().equals(record.getStatus()));
                 progress.setOperatorName(record.getOperatorName());
-                progress.setStartTime(record.getStartTime());
-                progress.setEndTime(record.getEndTime());
+                progress.setStartTime(record.getStartTime() != null ? record.getStartTime().toString() : null);
+                progress.setEndTime(record.getEndTime() != null ? record.getEndTime().toString() : null);
+
+                // 查询关键件绑定数量
+                Integer keyPartCount = keyPartBindMapper.selectCountByOperationRecordId(record.getId());
+                progress.setKeyPartCount(keyPartCount != null ? keyPartCount : 0);
 
                 if (OperationStatusEnum.COMPLETED.getStatus().equals(record.getStatus())) {
                     completedCount++;
-                } else if (OperationStatusEnum.IN_PROGRESS.getStatus().equals(record.getStatus())) {
-                    currentOperation = progress;
                 }
             } else {
                 progress.setStatus(0);
                 progress.setStatusName("待作业");
+                progress.setCompleted(false);
+                progress.setKeyPartCount(0);
             }
 
             progressList.add(progress);
         }
 
-        respVO.setOperationProgressList(progressList);
-        respVO.setCompletedOperations(completedCount);
+        respVO.setOperations(progressList);
+        respVO.setCompletedCount(completedCount);
         respVO.setProgressPercent(allOperations.isEmpty() ? 0 : (completedCount * 100.0 / allOperations.size()));
-        respVO.setCurrentOperation(currentOperation);
 
         return respVO;
     }

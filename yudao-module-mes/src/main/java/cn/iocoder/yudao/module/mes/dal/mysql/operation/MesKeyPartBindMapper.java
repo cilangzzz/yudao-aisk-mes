@@ -39,4 +39,8 @@ public interface MesKeyPartBindMapper extends BaseMapperX<MesKeyPartBindDO> {
         return selectCount(MesKeyPartBindDO::getPartSn, partSn) > 0;
     }
 
+    default Integer selectCountByOperationRecordId(Long operationRecordId) {
+        return Math.toIntExact(selectCount(MesKeyPartBindDO::getOperationRecordId, operationRecordId));
+    }
+
 }

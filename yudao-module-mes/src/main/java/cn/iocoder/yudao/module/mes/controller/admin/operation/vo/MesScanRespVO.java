@@ -15,6 +15,27 @@ public class MesScanRespVO {
     @Schema(description = "扫码类型名称", example = "VIN码")
     private String scanTypeName;
 
+    @Schema(description = "是否可以开始作业", example = "true")
+    private Boolean canStart;
+
+    @Schema(description = "VIN码（扫码结果）", example = "LSVNV2182E2100001")
+    private String vin;
+
+    @Schema(description = "工单ID", example = "1")
+    private Long workOrderId;
+
+    @Schema(description = "工单编号", example = "WO202603250001")
+    private String workOrderNo;
+
+    @Schema(description = "产品编码", example = "P001")
+    private String productCode;
+
+    @Schema(description = "产品名称", example = "汽车A")
+    private String productName;
+
+    @Schema(description = "物料编码", example = "M001")
+    private String materialCode;
+
     @Schema(description = "VIN码信息")
     private VinInfo vinInfo;
 

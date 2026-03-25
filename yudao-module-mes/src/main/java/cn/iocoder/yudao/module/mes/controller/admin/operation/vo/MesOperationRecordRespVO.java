@@ -8,6 +8,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Schema(description = "管理后台 - 作业记录 Response VO")
 @Data
@@ -97,5 +98,19 @@ public class MesOperationRecordRespVO {
     @Schema(description = "创建时间")
     @ExcelProperty("创建时间")
     private LocalDateTime createTime;
+
+    // ========== 扩展字段 ==========
+
+    @Schema(description = "状态名称", example = "进行中")
+    private String statusName;
+
+    @Schema(description = "结果名称", example = "合格")
+    private String resultName;
+
+    @Schema(description = "扭矩判定名称", example = "合格")
+    private String torqueResultName;
+
+    @Schema(description = "关键件绑定列表")
+    private List<MesKeyPartBindRespVO> keyParts;
 
 }

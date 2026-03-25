@@ -19,4 +19,6 @@ public class MesScanReqVO {
     @Schema(description = "工单ID（用于切换当前工单）", example = "1")
     private Long workOrderId;
 
+    @Schema(description = "操作ID（用于切换当前操作）", example = "1")
+    private Long operationId;
 }

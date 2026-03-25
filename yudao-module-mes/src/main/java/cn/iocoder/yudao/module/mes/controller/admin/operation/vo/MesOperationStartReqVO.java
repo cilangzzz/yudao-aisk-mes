@@ -26,4 +26,8 @@ public class MesOperationStartReqVO {
     @NotNull(message = "工作站ID不能为空")
     private Long workstationId;
 
+    @Schema(description = "备注", example = "备注")
+    private String remark;
+
+
 }
