@@ -25,7 +25,7 @@ public class MesVehicleProgressRespVO {
     private String productName;
 
     @Schema(description = "总工序列表")
-    private List<OperationProgress> operations;
+    private List<OperationProgressVO> operations;
 
     @Schema(description = "已完成工序数", example = "5")
     private Integer completedCount;

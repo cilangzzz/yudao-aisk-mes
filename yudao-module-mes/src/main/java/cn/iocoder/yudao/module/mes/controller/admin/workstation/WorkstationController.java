@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.mes.controller.admin.workstation;
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
@@ -141,7 +142,7 @@ public class WorkstationController {
     @PreAuthorize("@ss.hasPermission('mes:workstation:export')")
     public void exportWorkstationExcel(@Valid WorkstationPageReqVO pageReqVO,
                                         HttpServletResponse response) throws IOException {
-        pageReqVO.setPageSize(PageResult.PAGE_SIZE_NONE);
+        pageReqVO.setPageSize(PageParam.PAGE_SIZE_NONE);
         List<WorkstationDO> list = workstationService.getWorkstationList(pageReqVO);
         ExcelUtils.write(response, "工作站.xls", "数据", WorkstationRespVO.class,
                 BeanUtils.toBean(list, WorkstationRespVO.class));

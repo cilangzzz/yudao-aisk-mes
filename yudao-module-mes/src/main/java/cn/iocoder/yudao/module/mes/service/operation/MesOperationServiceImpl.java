@@ -154,10 +154,10 @@ public class MesOperationServiceImpl implements MesOperationService {
         List<MesOperationRecordDO> records = operationRecordMapper.selectListByVin(vin);
 
         int completedCount = 0;
-        List<MesVehicleProgressRespVO.OperationProgress> operations = new ArrayList<>();
+        List<MesVehicleProgressRespVO.OperationProgressVO> operations = new ArrayList<>();
 
         for (MesOperationRecordDO record : records) {
-            MesVehicleProgressRespVO.OperationProgress progress = new MesVehicleProgressRespVO.OperationProgress();
+            MesVehicleProgressRespVO.OperationProgressVO progress = new MesVehicleProgressRespVO.OperationProgressVO();
             progress.setOperationId(record.getOperationId());
             progress.setOperationCode(record.getOperationCode());
             progress.setOperationName(record.getOperationName());
