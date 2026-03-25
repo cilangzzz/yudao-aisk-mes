@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls -la \"h:/basePlatform/ruoyi-vue-pro-master/ruoyi-vue-pro-master/skills/modules/\"*/)"
+      "Bash(ls -la \"h:/basePlatform/ruoyi-vue-pro-master/ruoyi-vue-pro-master/skills/modules/\"*/)",
+      "Read(//h/Documents/software-dev-ai-workflow/5.0-系统模型/mes/**)"
     ]
   }
 }
