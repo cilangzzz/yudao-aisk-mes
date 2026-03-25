@@ -140,13 +140,14 @@ MES 独立管理（用户选择保留完整功能）:
 团队描述: 实现 MES 系统 8 个 P0 核心模块
 ```
 
-### 团队成员配置（建议 4 个 Agent 并行）
+### 团队成员配置（建议 5 个 Agent 并行）
 
 | Agent | 角色 | 负责模块 | 参考 Skill 文档 |
 |-------|------|----------|----------------|
 | **mes-base-agent** | 基础模块开发 | 基础数据 + 工作站管理 | skill-system.yaml, skill-infra.yaml |
 | **mes-work-agent** | 作业模块开发 | 工单管理 + 装配作业执行 | skill-erp.yaml |
 | **mes-material-agent** | 物料模块开发 | 工艺路线 + 物料管理 | skill-erp.yaml |
+| **mes-quality-agent** | 质量模块开发 | 质量管理（过程检验 + 终检 + 不合格处理） | skill-mes-quality.yaml |
 | **mes-trace-agent** | 追溯模块开发 | 生产追溯 + 移动终端 | skill-erp.yaml, skill-iot.yaml |
 
 ### 各 Agent 执行命令
@@ -240,7 +241,39 @@ MES 独立管理（用户选择保留完整功能）:
 - 库存低于安全库存时自动触发预警
 ```
 
-#### 4. mes-trace-agent（追溯模块）
+#### 4. mes-quality-agent（质量模块）
+
+```markdown
+参考 Skill 文档 skills/modules/mes/skill-mes-quality.yaml，
+实现 MES 系统质量管理模块：
+
+## 任务清单
+1. 创建数据库表：
+   - mes_quality_record（质量检验记录表）
+   - mes_defect_handle（不合格处理表）
+2. 实现质量检验功能：
+   - 检验记录创建接口（过程检/终检）
+   - 检验记录分页查询接口
+   - 检验记录详情接口
+3. 实现不合格处理功能：
+   - 不合格登记接口
+   - 不合格处理接口（返修/报废/让步接收）
+   - 不合格验证接口（闭环）
+   - 不合格记录分页查询接口
+
+## 参考需求文档
+- H:\Documents\software-dev-ai-workflow\5.0-系统模型\mes\车企模型\06-质量管理模块.md
+- H:\Documents\software-dev-ai-workflow\5.0-系统模型\mes\车企模型\研发\数据库设计文档.md
+
+## 业务规则
+- 终检不合格的车辆不可入库
+- 不合格问题必须闭环处理：待处理 -> 处理中 -> 已闭环
+- 处理方式：返修(0)、报废(1)、让步接收(2)
+- 检验类型：过程检(0)、终检(1)
+- 质量记录关联 VIN、工单、工序、工位、检验员
+```
+
+#### 5. mes-trace-agent（追溯模块）
 
 ```markdown
 参考 Skill 文档 skills/modules/erp/skill-erp.yaml 和 skills/modules/iot/skill-iot.yaml，
@@ -273,8 +306,9 @@ MES 独立管理（用户选择保留完整功能）:
    - Task 1: 基础模块开发 (mes-base-agent)
    - Task 2: 作业模块开发 (mes-work-agent)
    - Task 3: 物料模块开发 (mes-material-agent)
-   - Task 4: 追溯模块开发 (mes-trace-agent)
-3. 启动 4 个 Agent 并行开发
+   - Task 4: 质量模块开发 (mes-quality-agent)
+   - Task 5: 追溯模块开发 (mes-trace-agent)
+3. 启动 5 个 Agent 并行开发
 4. 定期检查进度，协调依赖关系
 5. 完成后进行集成测试
 ```

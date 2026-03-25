@@ -1,0 +1,441 @@
+# MES 质量管理模块 Skill 文档
+# 过程检验 + 终检管理 + 不合格处理
+
+skill:
+  id: "skill-mes-quality"
+  name: "MES Quality Skill"
+  version: "1.0.0"
+  module_path: "yudao-module-mes"
+  created_at: "2026-03-25"
+  updated_at: "2026-03-25"
+
+# ============================================
+# 第一阶段：设计理念
+# ============================================
+philosophy:
+  # 业务定位
+  business_position: |
+    MES 质量管理模块提供汽车整车装配过程中的质量控制能力：
+    1. 过程检验：工序过程中的质量检验记录（扭矩、外观、尺寸等）
+    2. 终检管理：整车下线前的最终检验
+    3. 不合格处理：不合格品发现、登记、处理、验证闭环流程
+    4. 质量追溯：质量问题追溯查询
+
+  # 设计原则
+  design_principles:
+    - "终检限制：终检不合格的车辆不可入库"
+    - "闭环处理：不合格问题必须闭环处理（待处理->处理中->已闭环）"
+    - "追溯关联：质量记录关联 VIN、工单、工序、工位"
+    - "权限控制：检验员、处理人、验证人权限分离"
+    - "工作流审批：关键质量问题触发工作流审批"
+
+  # 领域模型
+  domain_model:
+    aggregates:
+      # 质量检验聚合
+      - name: "质量检验聚合"
+        type: "聚合根"
+        entities:
+          - "质量检验记录 (MesQualityRecordDO)"
+          - "不合格处理 (MesDefectHandleDO)"
+        description: "质量管理域核心聚合，管理检验记录和不合格处理流程"
+
+    value_objects:
+      - name: "MesQualityRecordRespVO"
+        type: "值对象"
+        description: "检验记录响应 VO"
+
+      - name: "MesDefectHandleRespVO"
+        type: "值对象"
+        description: "不合格处理响应 VO"
+
+    services:
+      - name: "MesQualityService"
+        type: "领域服务"
+        description: "质量检验领域服务，管理检验记录创建、查询"
+
+      - name: "MesDefectService"
+        type: "领域服务"
+        description: "不合格处理领域服务，管理不合格登记、处理、验证"
+
+# ============================================
+# 第二阶段：架构设计
+# ============================================
+architecture:
+  # 分层架构
+  layers:
+    - name: "controller"
+      purpose: "HTTP接口层，处理请求响应、参数校验、权限控制"
+      components:
+        # 管理后台 - 质量检验接口
+        - "MesQualityController - 检验记录创建、分页查询、详情、统计"
+        # 管理后台 - 不合格处理接口
+        - "MesDefectController - 不合格登记、处理、验证、分页查询"
+
+    - name: "service"
+      purpose: "业务逻辑层，实现领域服务、事务管理、业务规则校验"
+      components:
+        - "quality/ - 质量检验服务（创建记录、查询、统计）"
+        - "defect/ - 不合格处理服务（登记、处理、验证、闭环）"
+
+    - name: "dal"
+      purpose: "数据访问层，封装数据库操作"
+      components:
+        - "dataobject/quality/ - 质量相关 DO"
+        - "mysql/quality/ - 质量 Mapper"
+
+  # 设计模式应用
+  design_patterns:
+    - pattern: "状态机模式"
+      location: "DefectHandleStatusEnum"
+      purpose: "定义不合格处理状态：待处理(0) -> 处理中(1) -> 已闭环(2)"
+
+    - pattern: "策略模式"
+      location: "HandleTypeEnum"
+      purpose: "定义处理方式：返修(0)、报废(1)、让步接收(2)"
+
+    - pattern: "策略模式"
+      location: "CheckTypeEnum"
+      purpose: "定义检验类型：过程检(0)、终检(1)"
+
+  # 模块间通信
+  communication:
+    apis: []
+    consumers:
+      - module: "system"
+        api: "AdminUserApi"
+        purpose: "获取检验员、处理人、验证人信息"
+    mq: []
+
+# ============================================
+# 第三阶段：数据表设计
+# ============================================
+data_model:
+  # 实体继承体系
+  entity_hierarchy:
+    base: "TenantBaseDO"
+    description: "所有 DO 继承 TenantBaseDO，支持多租户，包含 tenant_id、creator、create_time、updater、update_time、deleted 字段"
+
+  # 核心数据表
+  tables:
+    # ========== 质量检验记录表 ==========
+    - name: "mes_quality_record"
+      comment: "质量检验记录表"
+      entity: "MesQualityRecordDO"
+      extends: "TenantBaseDO"
+      columns:
+        - { name: "id", type: "BIGINT", comment: "主键ID" }
+        - { name: "tenant_id", type: "BIGINT", comment: "租户ID" }
+        - { name: "vin", type: "VARCHAR(64)", comment: "车辆VIN" }
+        - { name: "work_order_id", type: "BIGINT", comment: "工单ID" }
+        - { name: "check_type", type: "TINYINT", comment: "检验类型:0-过程检,1-终检" }
+        - { name: "check_item_code", type: "VARCHAR(64)", comment: "检验项目编码" }
+        - { name: "check_item_name", type: "VARCHAR(255)", comment: "检验项目名称" }
+        - { name: "operation_id", type: "BIGINT", comment: "关联工序ID" }
+        - { name: "operation_name", type: "VARCHAR(255)", comment: "工序名称" }
+        - { name: "workstation_id", type: "BIGINT", comment: "检验工位ID" }
+        - { name: "result", type: "TINYINT", comment: "结果:0-合格,1-不合格" }
+        - { name: "check_value", type: "VARCHAR(255)", comment: "实际检验值" }
+        - { name: "standard_value", type: "VARCHAR(255)", comment: "标准值" }
+        - { name: "inspector_id", type: "BIGINT", comment: "检验员ID" }
+        - { name: "inspector_name", type: "VARCHAR(64)", comment: "检验员姓名" }
+        - { name: "check_time", type: "DATETIME", comment: "检验时间" }
+        - { name: "defect_reason", type: "VARCHAR(500)", comment: "不合格原因" }
+        - { name: "remark", type: "VARCHAR(500)", comment: "备注" }
+
+    # ========== 不合格处理表 ==========
+    - name: "mes_defect_handle"
+      comment: "不合格处理表"
+      entity: "MesDefectHandleDO"
+      extends: "TenantBaseDO"
+      columns:
+        - { name: "id", type: "BIGINT", comment: "主键ID" }
+        - { name: "tenant_id", type: "BIGINT", comment: "租户ID" }
+        - { name: "quality_record_id", type: "BIGINT", comment: "质量记录ID" }
+        - { name: "vin", type: "VARCHAR(64)", comment: "车辆VIN" }
+        - { name: "defect_type", type: "VARCHAR(64)", comment: "缺陷类型" }
+        - { name: "defect_desc", type: "VARCHAR(500)", comment: "缺陷描述" }
+        - { name: "handle_type", type: "TINYINT", comment: "处理方式:0-返修,1-报废,2-让步接收" }
+        - { name: "handle_status", type: "TINYINT", comment: "处理状态:0-待处理,1-处理中,2-已闭环" }
+        - { name: "handler_id", type: "BIGINT", comment: "处理人ID" }
+        - { name: "handler_name", type: "VARCHAR(64)", comment: "处理人姓名" }
+        - { name: "handle_time", type: "DATETIME", comment: "处理时间" }
+        - { name: "handle_result", type: "VARCHAR(500)", comment: "处理结果" }
+        - { name: "verifier_id", type: "BIGINT", comment: "验证人ID" }
+        - { name: "verifier_name", type: "VARCHAR(64)", comment: "验证人姓名" }
+        - { name: "verify_time", type: "DATETIME", comment: "验证时间" }
+
+  # 表关系
+  relationships:
+    - from: "mes_quality_record"
+      to: "mes_defect_handle"
+      type: "1:1"
+      foreign_key: "quality_record_id"
+      description: "一条不合格检验记录对应一条不合格处理记录"
+
+# ============================================
+# 第四阶段：代码使用设计
+# ============================================
+code_patterns:
+  # Controller层规范
+  controller:
+    annotations:
+      - "@Tag(name = '管理后台 - MES 质量管理') - Swagger接口文档标签"
+      - "@RestController - RESTful控制器"
+      - "@RequestMapping('/mes/quality') - 请求路径前缀"
+      - "@PreAuthorize('@ss.hasPermission('mes:quality:xxx')') - 权限控制"
+      - "@Validated - 参数校验"
+    example: |
+      @Tag(name = "管理后台 - MES 质量管理")
+      @RestController
+      @RequestMapping("/mes/quality")
+      @Validated
+      public class MesQualityController {
+
+          @PostMapping("/create")
+          @Operation(summary = "创建检验记录")
+          @PreAuthorize("@ss.hasPermission('mes:quality:create')")
+          public CommonResult<Long> createQualityRecord(@Valid @RequestBody MesQualityRecordCreateReqVO createReqVO) {
+              return success(qualityService.createQualityRecord(createReqVO));
+          }
+
+          @GetMapping("/page")
+          @Operation(summary = "检验记录分页查询")
+          @PreAuthorize("@ss.hasPermission('mes:quality:query')")
+          public CommonResult<PageResult<MesQualityRecordRespVO>> getQualityRecordPage(@Valid MesQualityRecordPageReqVO pageReqVO) {
+              return success(qualityService.getQualityRecordPage(pageReqVO));
+          }
+      }
+
+      @Tag(name = "管理后台 - MES 不合格处理")
+      @RestController
+      @RequestMapping("/mes/defect")
+      @Validated
+      public class MesDefectController {
+
+          @PostMapping("/create")
+          @Operation(summary = "不合格登记")
+          @PreAuthorize("@ss.hasPermission('mes:defect:create')")
+          public CommonResult<Long> createDefect(@Valid @RequestBody MesDefectCreateReqVO createReqVO) {
+              return success(defectService.createDefect(createReqVO));
+          }
+
+          @PutMapping("/handle")
+          @Operation(summary = "不合格处理")
+          @PreAuthorize("@ss.hasPermission('mes:defect:handle')")
+          public CommonResult<Boolean> handleDefect(@Valid @RequestBody MesDefectHandleReqVO handleReqVO) {
+              defectService.handleDefect(handleReqVO);
+              return success(true);
+          }
+
+          @PutMapping("/verify")
+          @Operation(summary = "不合格验证")
+          @PreAuthorize("@ss.hasPermission('mes:defect:verify')")
+          public CommonResult<Boolean> verifyDefect(@Valid @RequestBody MesDefectVerifyReqVO verifyReqVO) {
+              defectService.verifyDefect(verifyReqVO);
+              return success(true);
+          }
+      }
+
+  # Service层规范
+  service:
+    interface_pattern: |
+      public interface MesQualityService {
+          Long createQualityRecord(MesQualityRecordCreateReqVO createReqVO);
+          PageResult<MesQualityRecordRespVO> getQualityRecordPage(MesQualityRecordPageReqVO pageReqVO);
+          MesQualityRecordRespVO getQualityRecord(Long id);
+      }
+
+      public interface MesDefectService {
+          Long createDefect(MesDefectCreateReqVO createReqVO);
+          void handleDefect(MesDefectHandleReqVO handleReqVO);
+          void verifyDefect(MesDefectVerifyReqVO verifyReqVO);
+          PageResult<MesDefectHandleRespVO> getDefectPage(MesDefectPageReqVO pageReqVO);
+      }
+
+    impl_pattern: |
+      @Service
+      @Validated
+      public class MesDefectServiceImpl implements MesDefectService {
+
+          @Resource
+          private MesDefectHandleMapper defectHandleMapper;
+          @Resource
+          private MesQualityRecordMapper qualityRecordMapper;
+
+          @Override
+          @Transactional(rollbackFor = Exception.class)
+          public void handleDefect(MesDefectHandleReqVO handleReqVO) {
+              // 1. 校验处理记录存在
+              MesDefectHandleDO defect = validateDefectExists(handleReqVO.getId());
+              // 2. 校验状态为待处理
+              validateDefectStatus(defect, DefectHandleStatusEnum.PENDING);
+              // 3. 更新处理信息
+              defect.setHandleType(handleReqVO.getHandleType());
+              defect.setHandleStatus(DefectHandleStatusEnum.PROCESSING.getStatus());
+              defect.setHandlerId(handleReqVO.getHandlerId());
+              defect.setHandlerName(handleReqVO.getHandlerName());
+              defect.setHandleTime(LocalDateTime.now());
+              defect.setHandleResult(handleReqVO.getHandleResult());
+              defectHandleMapper.updateById(defect);
+          }
+
+          @Override
+          @Transactional(rollbackFor = Exception.class)
+          public void verifyDefect(MesDefectVerifyReqVO verifyReqVO) {
+              // 1. 校验处理记录存在
+              MesDefectHandleDO defect = validateDefectExists(verifyReqVO.getId());
+              // 2. 校验状态为处理中
+              validateDefectStatus(defect, DefectHandleStatusEnum.PROCESSING);
+              // 3. 更新验证信息，状态改为已闭环
+              defect.setHandleStatus(DefectHandleStatusEnum.CLOSED.getStatus());
+              defect.setVerifierId(verifyReqVO.getVerifierId());
+              defect.setVerifierName(verifyReqVO.getVerifierName());
+              defect.setVerifyTime(LocalDateTime.now());
+              defectHandleMapper.updateById(defect);
+          }
+      }
+
+  # 数据访问规范
+  dal:
+    mapper_pattern: |
+      @Mapper
+      public interface MesQualityRecordMapper extends BaseMapperX<MesQualityRecordDO> {
+
+          default PageResult<MesQualityRecordDO> selectPage(MesQualityRecordPageReqVO reqVO) {
+              return selectPage(reqVO, new LambdaQueryWrapperX<MesQualityRecordDO>()
+                      .eqIfPresent(MesQualityRecordDO::getVin, reqVO.getVin())
+                      .eqIfPresent(MesQualityRecordDO::getCheckType, reqVO.getCheckType())
+                      .eqIfPresent(MesQualityRecordDO::getResult, reqVO.getResult())
+                      .betweenIfPresent(MesQualityRecordDO::getCheckTime, reqVO.getCheckTime())
+                      .orderByDesc(MesQualityRecordDO::getId));
+          }
+
+          default List<MesQualityRecordDO> selectListByVin(String vin) {
+              return selectList(new LambdaQueryWrapperX<MesQualityRecordDO>()
+                      .eq(MesQualityRecordDO::getVin, vin)
+                      .orderByDesc(MesQualityRecordDO::getCheckTime));
+          }
+      }
+
+  # 异常处理
+  error_handling:
+    code_prefix: "1-040-xxx-xxx"
+    examples:
+      - code: "1_040_004_000"
+        message: "质量检验记录不存在"
+        constant: "QUALITY_RECORD_NOT_FOUND"
+      - code: "1_040_004_001"
+        message: "不合格处理记录不存在"
+        constant: "DEFECT_HANDLE_NOT_FOUND"
+      - code: "1_040_004_002"
+        message: "不合格处理状态不正确"
+        constant: "DEFECT_HANDLE_STATUS_INVALID"
+      - code: "1_040_004_003"
+        message: "终检不合格，不可入库"
+        constant: "FINAL_CHECK_FAILED_CANNOT_STORAGE"
+
+  # 统一响应
+  response:
+    success_pattern: "CommonResult.success(data)"
+    error_pattern: "throw exception(ERROR_CODE, args...)"
+
+# ============================================
+# 第五阶段：扩展指南
+# ============================================
+extension_guide:
+  # 新增功能步骤
+  new_feature:
+    title: "新增检验项目类型"
+    steps:
+      - step: "1. 定义检验项目枚举"
+        detail: "在 enums/CheckItemEnum.java 中添加检验项目类型"
+
+      - step: "2. 添加检验逻辑"
+        detail: "在 MesQualityServiceImpl 中添加检验项目处理逻辑"
+
+      - step: "3. 添加前端配置"
+        detail: "前端添加检验项目配置界面"
+
+  # 最佳实践
+  best_practices:
+    - practice: "不合格处理状态机"
+      description: |
+        严格遵循状态流转：待处理(0) -> 处理中(1) -> 已闭环(2)
+        不允许跳跃状态变更
+        不允许逆向状态变更
+
+    - practice: "终检校验"
+      description: |
+        终检不合格的车辆不可入库
+        入库前需校验终检结果
+        终检记录需关联所有工序完成记录
+
+    - practice: "质量追溯"
+      description: |
+        通过 VIN 可追溯所有质量检验记录
+        质量记录关联工单、工序、工位、检验员
+        支持按时间范围、检验类型、结果筛选
+
+# ============================================
+# 依赖关系
+# ============================================
+dependencies:
+  # 内部依赖
+  internal:
+    - module: "system"
+      api: "AdminUserApi"
+      purpose: "获取检验员、处理人、验证人信息"
+
+  # 外部依赖
+  external:
+    - name: "MyBatis-Plus"
+      purpose: "ORM 框架，简化数据库操作"
+
+# ============================================
+# 关键文件清单
+# ============================================
+key_files:
+  # SQL
+  - path: "sql/master/mysql/table/create/2026_03_25_mes_quality_record_create.sql"
+    purpose: "质量检验记录表建表脚本"
+
+  - path: "sql/master/mysql/table/create/2026_03_25_mes_defect_handle_create.sql"
+    purpose: "不合格处理表建表脚本"
+
+  # 控制器
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/controller/admin/quality/MesQualityController.java"
+    purpose: "质量检验接口"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/controller/admin/quality/MesDefectController.java"
+    purpose: "不合格处理接口"
+
+  # 服务
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/service/quality/MesQualityService.java"
+    purpose: "质量检验服务接口"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/service/quality/MesDefectService.java"
+    purpose: "不合格处理服务接口"
+
+  # 数据访问
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/dataobject/quality/MesQualityRecordDO.java"
+    purpose: "质量检验记录实体"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/dataobject/quality/MesDefectHandleDO.java"
+    purpose: "不合格处理实体"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/mysql/quality/MesQualityRecordMapper.java"
+    purpose: "质量检验记录 Mapper"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/mysql/quality/MesDefectHandleMapper.java"
+    purpose: "不合格处理 Mapper"
+
+  # 枚举
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/enums/CheckTypeEnum.java"
+    purpose: "检验类型枚举"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/enums/DefectHandleStatusEnum.java"
+    purpose: "不合格处理状态枚举"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/enums/HandleTypeEnum.java"
+    purpose: "处理方式枚举"

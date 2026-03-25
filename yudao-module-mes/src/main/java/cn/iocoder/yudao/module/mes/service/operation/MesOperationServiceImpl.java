@@ -218,7 +218,7 @@ public class MesOperationServiceImpl implements MesOperationService {
         info.setOrderNo(workOrder.getOrderNo());
         info.setProductName(workOrder.getProductName());
         info.setStatus(workOrder.getStatus());
-        info.setStatusName(WorkOrderStatusEnum.valueOf(workOrder.getStatus()).getName());
+        info.setStatusName(WorkOrderStatusEnum.valueOf(String.valueOf(workOrder.getStatus())).getName());
         return info;
     }
 
@@ -231,7 +231,7 @@ public class MesOperationServiceImpl implements MesOperationService {
     }
 
     private boolean isValidVin(String vin) {
-        if (vin == null || vin.length() \!= 17) {
+        if (vin == null || vin.length() != 17) {
             return false;
         }
         return vin.matches("^[A-Za-z0-9]+$");
