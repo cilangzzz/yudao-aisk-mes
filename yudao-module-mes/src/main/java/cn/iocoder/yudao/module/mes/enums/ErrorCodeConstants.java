@@ -83,10 +83,46 @@ public interface ErrorCodeConstants {
     ErrorCode ROUTING_CODE_DUPLICATE = new ErrorCode(1_020_009_001, "已存在该编码的工艺路线");
     ErrorCode ROUTING_HAS_WORK_ORDERS = new ErrorCode(1_020_009_002, "工艺路线被工单引用，无法删除");
     ErrorCode ROUTING_STATUS_ERROR = new ErrorCode(1_020_009_003, "工艺路线状态不正确");
+    ErrorCode ROUTING_PRODUCT_ACTIVATED = new ErrorCode(1_020_009_004, "该产品已存在生效的工艺路线版本");
 
     // ========== 工序管理 1-020-010-xxx ==========
     ErrorCode OPERATION_NOT_EXISTS = new ErrorCode(1_020_010_000, "工序不存在");
     ErrorCode OPERATION_CODE_DUPLICATE = new ErrorCode(1_020_010_001, "已存在该编码的工序");
     ErrorCode OPERATION_SEQUENCE_ERROR = new ErrorCode(1_020_010_002, "工序顺序号重复");
+
+    // ========== 作业记录 1-020-011-xxx ==========
+    ErrorCode OPERATION_RECORD_NOT_EXISTS = new ErrorCode(1_020_011_000, "作业记录不存在");
+    ErrorCode OPERATION_RECORD_DUPLICATE = new ErrorCode(1_020_011_001, "该VIN码在此工序已有作业记录");
+    ErrorCode OPERATION_PRE_NOT_COMPLETED = new ErrorCode(1_020_011_002, "前置工序未完成");
+    ErrorCode OPERATION_WORK_ORDER_NOT_PRODUCING = new ErrorCode(1_020_011_003, "工单未处于生产中状态");
+    ErrorCode OPERATION_RECORD_ALREADY_COMPLETED = new ErrorCode(1_020_011_004, "作业已完成，无法重复操作");
+
+    // ========== 关键件绑定 1-020-012-xxx ==========
+    ErrorCode KEY_PART_NOT_EXISTS = new ErrorCode(1_020_012_000, "关键件绑定记录不存在");
+    ErrorCode KEY_PART_ALREADY_BIND = new ErrorCode(1_020_012_001, "关键件序列号已绑定");
+    ErrorCode KEY_PART_NOT_REQUIRED = new ErrorCode(1_020_012_002, "该工序无需绑定此关键件");
+
+    // ========== 扫码识别 1-020-013-xxx ==========
+    ErrorCode SCAN_INVALID_FORMAT = new ErrorCode(1_020_013_000, "无效的码格式");
+    ErrorCode SCAN_VIN_FORMAT_ERROR = new ErrorCode(1_020_013_001, "VIN码格式错误，应为17位字母数字组合");
+    ErrorCode SCAN_WORK_ORDER_NOT_FOUND = new ErrorCode(1_020_013_002, "工单码对应的工单不存在");
+    ErrorCode SCAN_MATERIAL_NOT_FOUND = new ErrorCode(1_020_013_003, "物料码对应的物料不存在");
+
+    // ========== 追溯相关 1-020-014-xxx ==========
+    ErrorCode TRACE_VIN_NOT_FOUND = new ErrorCode(1_020_014_000, "VIN追溯信息不存在");
+    ErrorCode TRACE_KEY_PART_NOT_FOUND = new ErrorCode(1_020_014_001, "关键件追溯信息不存在");
+    ErrorCode TRACE_PERMISSION_DENIED = new ErrorCode(1_020_014_002, "无权限查询追溯信息");
+    ErrorCode TRACE_VIN_FORMAT_ERROR = new ErrorCode(1_020_014_003, "VIN码格式不正确，应为17位");
+
+    // ========== 异常上报 1-020-015-xxx ==========
+    ErrorCode EXCEPTION_REASON_REQUIRED = new ErrorCode(1_020_015_000, "异常原因不能为空");
+
+    // ========== 离线作业 1-020-016-xxx ==========
+    ErrorCode OFFLINE_SYNC_FAILED = new ErrorCode(1_020_016_000, "离线数据同步失败");
+
+    // ========== 线边库存 1-020-017-xxx ==========
+    ErrorCode STOCK_NOT_EXISTS = new ErrorCode(1_020_017_000, "线边库存不存在");
+    ErrorCode STOCK_NOT_ENOUGH = new ErrorCode(1_020_017_001, "库存不足，当前库存：{}，消耗数量：{}");
+    ErrorCode STOCK_NEGATIVE_NOT_ALLOWED = new ErrorCode(1_020_017_002, "库存扣减后不能为负数");
 
 }

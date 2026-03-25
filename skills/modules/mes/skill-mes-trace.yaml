@@ -1,0 +1,466 @@
+# MES 追溯模块 Skill 文档
+# 生产追溯 + 移动终端模块
+
+skill:
+  id: "skill-mes-trace"
+  name: "MES Trace Skill"
+  version: "1.0.0"
+  module_path: "yudao-module-mes"
+  created_at: "2026-03-25"
+  updated_at: "2026-03-25"
+
+# ============================================
+# 第一阶段：设计理念
+# ============================================
+philosophy:
+  # 业务定位
+  business_position: |
+    MES 追溯模块提供生产过程的完整追溯能力，支持汽车整车装配 MES 系统：
+    1. VIN 正向追溯：从车辆 VIN 追溯完整生产历史（车辆信息、工单、作业记录、关键件绑定、质量记录）
+    2. 关键件反向追溯：从零部件 SN 追溯关联车辆（零部件信息、绑定车辆VIN、绑定时间/工位/操作员）
+    3. 移动终端支持：为 UniApp 移动端提供扫码作业接口（微信小程序/H5/APP）
+    4. 离线作业支持：断网时缓存数据后续同步
+
+  # 设计原则
+  design_principles:
+    - "追溯数据永久保存：所有追溯数据不可删除，仅支持逻辑删除标记"
+    - "权限控制：追溯查询需相应权限，移动端操作需工位权限验证"
+    - "数据脱敏：敏感数据脱敏显示（VIN、手机号、姓名）"
+    - "关键件必扫：关键工序必须扫描所有关键件才能完成报工"
+    - "扫码范围限制：扫码需在规定工位范围内有效"
+    - "异常必填：异常上报必须填写异常原因"
+
+  # 领域模型
+  domain_model:
+    aggregates:
+      # 追溯聚合
+      - name: "追溯聚合"
+        type: "聚合根"
+        entities:
+          - "作业记录 (MesOperationRecordDO)"
+          - "关键件绑定 (MesKeyPartBindDO)"
+          - "设备采集数据 (MesDeviceDataDO)"
+        description: "追溯数据聚合，支持 VIN 正向追溯和关键件反向追溯"
+
+      # 扫码作业聚合
+      - name: "扫码作业聚合"
+        type: "聚合根"
+        entities:
+          - "扫码记录 (MesScanRecordDO)"
+          - "离线作业缓存 (MesOfflineCacheDO)"
+        description: "扫码作业数据聚合，支持移动端作业和离线缓存"
+
+    value_objects:
+      - name: "MesVinTraceRespVO"
+        type: "值对象"
+        description: "VIN 追溯响应 VO，聚合车辆、工单、作业、关键件、质量、设备数据"
+
+      - name: "MesPartTraceRespVO"
+        type: "值对象"
+        description: "关键件反向追溯响应 VO"
+
+      - name: "MesScanRespVO"
+        type: "值对象"
+        description: "扫码响应 VO，返回作业信息和操作指引"
+
+    services:
+      - name: "MesTraceService"
+        type: "领域服务"
+        description: "追溯领域服务，提供 VIN 追溯和关键件追溯"
+
+      - name: "MesOperationService"
+        type: "领域服务"
+        description: "作业领域服务，管理扫码、开始、完成、关键件绑定"
+
+      - name: "MesOfflineService"
+        type: "领域服务"
+        description: "离线作业服务，管理离线缓存和数据同步"
+
+# ============================================
+# 第二阶段：架构设计
+# ============================================
+architecture:
+  # 分层架构
+  layers:
+    - name: "controller"
+      purpose: "HTTP接口层，处理请求响应、参数校验、权限控制"
+      components:
+        # 管理后台 - 追溯接口
+        - "MesTraceController - VIN 追溯、关键件追溯、作业详情、操作员记录、设备数据"
+        # 移动端 - 认证接口
+        - "MesMobileAuthController - 用户登录认证"
+        # 移动端 - 作业接口
+        - "MesMobileOperationController - 扫码解析、开始作业、完成作业、绑定关键件"
+        # 移动端 - 工单接口
+        - "MesMobileWorkOrderController - 工单列表、作业记录"
+        # 移动端 - 异常接口
+        - "MesMobileExceptionController - 异常上报"
+
+    - name: "service"
+      purpose: "业务逻辑层，实现领域服务、事务管理、业务规则校验"
+      components:
+        - "trace/ - 追溯服务（VIN 追溯、关键件追溯、作业详情、操作员记录、设备数据）"
+        - "operation/ - 作业服务（扫码、开始、完成、关键件绑定）"
+        - "keypart/ - 关键件服务（绑定、校验、查询）"
+        - "offline/ - 离线服务（缓存、同步）"
+
+    - name: "dal"
+      purpose: "数据访问层，封装数据库操作"
+      components:
+        - "dataobject/trace/ - 追溯相关 DO"
+        - "dataobject/operation/ - 作业相关 DO"
+        - "dataobject/keypart/ - 关键件相关 DO"
+        - "mysql/trace/ - 追溯 Mapper"
+        - "mysql/operation/ - 作业 Mapper"
+        - "mysql/keypart/ - 关键件 Mapper"
+
+  # 设计模式应用
+  design_patterns:
+    - pattern: "聚合查询模式"
+      location: "MesTraceServiceImpl.traceByVin"
+      purpose: "VIN 追溯聚合多表数据，一次性返回完整追溯信息"
+
+    - pattern: "状态机模式"
+      location: "OperationStatusEnum"
+      purpose: "定义作业状态：IN_PROGRESS(0) -> COMPLETED(1) / EXCEPTION(2)"
+
+    - pattern: "策略模式"
+      location: "ScanTypeEnum"
+      purpose: "定义扫码类型：VIN、MATERIAL、WORK_ORDER、KEY_PART"
+
+    - pattern: "离线缓存模式"
+      location: "MesOfflineServiceImpl"
+      purpose: "断网时缓存数据到本地，联网后自动同步"
+
+  # 模块间通信
+  communication:
+    apis: []
+    consumers:
+      - module: "system"
+        api: "AdminUserApi"
+        purpose: "获取操作员信息，显示操作员姓名"
+    mq: []
+
+# ============================================
+# 第三阶段：数据表设计
+# ============================================
+data_model:
+  # 实体继承体系
+  entity_hierarchy:
+    base: "TenantBaseDO"
+    description: "所有 DO 继承 TenantBaseDO，支持多租户，包含 tenant_id、creator、create_time、updater、update_time、deleted 字段"
+
+  # 核心数据表
+  tables:
+    # ========== 作业记录表 ==========
+    - name: "mes_operation_record"
+      comment: "作业记录表"
+      entity: "MesOperationRecordDO"
+      extends: "TenantBaseDO"
+      columns:
+        - { name: "id", type: "BIGINT", comment: "主键ID" }
+        - { name: "work_order_id", type: "BIGINT", comment: "工单ID" }
+        - { name: "work_order_no", type: "VARCHAR(64)", comment: "工单编号" }
+        - { name: "vin", type: "VARCHAR(64)", comment: "VIN码" }
+        - { name: "operation_id", type: "BIGINT", comment: "工序ID" }
+        - { name: "operation_code", type: "VARCHAR(64)", comment: "工序编码" }
+        - { name: "operation_name", type: "VARCHAR(255)", comment: "工序名称" }
+        - { name: "workstation_id", type: "BIGINT", comment: "工作站ID" }
+        - { name: "workstation_name", type: "VARCHAR(255)", comment: "工作站名称" }
+        - { name: "operator_id", type: "BIGINT", comment: "操作员ID" }
+        - { name: "operator_name", type: "VARCHAR(64)", comment: "操作员姓名" }
+        - { name: "start_time", type: "DATETIME", comment: "开始时间" }
+        - { name: "end_time", type: "DATETIME", comment: "结束时间" }
+        - { name: "duration", type: "INT", comment: "作业时长(秒)" }
+        - { name: "status", type: "TINYINT", comment: "状态:0-进行中,1-已完成,2-异常" }
+        - { name: "result", type: "TINYINT", comment: "结果:0-合格,1-不合格" }
+        - { name: "torque_value", type: "DECIMAL(10,2)", comment: "扭矩值" }
+        - { name: "remark", type: "VARCHAR(500)", comment: "备注" }
+
+    # ========== 关键件绑定表 ==========
+    - name: "mes_key_part_bind"
+      comment: "关键件绑定表"
+      entity: "MesKeyPartBindDO"
+      extends: "TenantBaseDO"
+      columns:
+        - { name: "id", type: "BIGINT", comment: "主键ID" }
+        - { name: "work_order_id", type: "BIGINT", comment: "工单ID" }
+        - { name: "operation_record_id", type: "BIGINT", comment: "作业记录ID" }
+        - { name: "vin", type: "VARCHAR(64)", comment: "车辆VIN码" }
+        - { name: "part_code", type: "VARCHAR(64)", comment: "零部件编码" }
+        - { name: "part_name", type: "VARCHAR(255)", comment: "零部件名称" }
+        - { name: "part_sn", type: "VARCHAR(128)", comment: "零部件序列号" }
+        - { name: "supplier_code", type: "VARCHAR(64)", comment: "供应商编码" }
+        - { name: "supplier_name", type: "VARCHAR(255)", comment: "供应商名称" }
+        - { name: "bind_time", type: "DATETIME", comment: "绑定时间" }
+        - { name: "workstation_id", type: "BIGINT", comment: "绑定工位ID" }
+        - { name: "operator_id", type: "BIGINT", comment: "操作员ID" }
+        - { name: "operator_name", type: "VARCHAR(64)", comment: "操作员姓名" }
+
+    # ========== 扫码记录表 ==========
+    - name: "mes_scan_record"
+      comment: "扫码记录表"
+      entity: "MesScanRecordDO"
+      extends: "TenantBaseDO"
+      columns:
+        - { name: "id", type: "BIGINT", comment: "主键ID" }
+        - { name: "scan_code", type: "VARCHAR(128)", comment: "扫码内容" }
+        - { name: "scan_type", type: "TINYINT", comment: "扫码类型:1-VIN,2-物料码,3-工单码,4-关键件SN" }
+        - { name: "workstation_id", type: "BIGINT", comment: "工位ID" }
+        - { name: "operator_id", type: "BIGINT", comment: "操作员ID" }
+        - { name: "operation_id", type: "BIGINT", comment: "关联工序ID" }
+        - { name: "vin", type: "VARCHAR(64)", comment: "关联VIN" }
+        - { name: "work_order_id", type: "BIGINT", comment: "关联工单ID" }
+        - { name: "result", type: "TINYINT", comment: "扫码结果:0-成功,1-失败" }
+        - { name: "fail_reason", type: "VARCHAR(255)", comment: "失败原因" }
+        - { name: "scan_time", type: "DATETIME", comment: "扫码时间" }
+
+    # ========== 设备采集数据表 ==========
+    - name: "mes_device_data"
+      comment: "设备采集数据表"
+      entity: "MesDeviceDataDO"
+      extends: "TenantBaseDO"
+      columns:
+        - { name: "id", type: "BIGINT", comment: "主键ID" }
+        - { name: "device_code", type: "VARCHAR(64)", comment: "设备编码" }
+        - { name: "device_name", type: "VARCHAR(255)", comment: "设备名称" }
+        - { name: "device_type", type: "VARCHAR(64)", comment: "设备类型" }
+        - { name: "vin", type: "VARCHAR(64)", comment: "关联VIN" }
+        - { name: "operation_record_id", type: "BIGINT", comment: "作业记录ID" }
+        - { name: "workstation_id", type: "BIGINT", comment: "工位ID" }
+        - { name: "data_type", type: "VARCHAR(64)", comment: "数据类型:TORQUE/ANGLE/TEMPERATURE等" }
+        - { name: "data_value", type: "DECIMAL(15,4)", comment: "数据值" }
+        - { name: "data_unit", type: "VARCHAR(32)", comment: "数据单位" }
+        - { name: "result", type: "TINYINT", comment: "判定结果:0-合格,1-不合格" }
+        - { name: "collect_time", type: "DATETIME", comment: "采集时间" }
+        - { name: "raw_data", type: "TEXT", comment: "原始数据" }
+
+    # ========== 离线作业缓存表 ==========
+    - name: "mes_offline_cache"
+      comment: "离线作业缓存表"
+      entity: "MesOfflineCacheDO"
+      extends: "TenantBaseDO"
+      columns:
+        - { name: "id", type: "BIGINT", comment: "主键ID" }
+        - { name: "user_id", type: "BIGINT", comment: "用户ID" }
+        - { name: "cache_type", type: "TINYINT", comment: "缓存类型:1-作业记录,2-关键件绑定,3-异常上报" }
+        - { name: "cache_data", type: "JSON", comment: "缓存数据" }
+        - { name: "sync_status", type: "TINYINT", comment: "同步状态:0-待同步,1-已同步,2-同步失败" }
+        - { name: "sync_time", type: "DATETIME", comment: "同步时间" }
+        - { name: "fail_reason", type: "VARCHAR(255)", comment: "同步失败原因" }
+
+  # 表关系
+  relationships:
+    - from: "mes_operation_record"
+      to: "mes_key_part_bind"
+      type: "1:N"
+      foreign_key: "operation_record_id"
+    - from: "mes_operation_record"
+      to: "mes_device_data"
+      type: "1:N"
+      foreign_key: "operation_record_id"
+    - from: "mes_key_part_bind"
+      to: "mes_operation_record"
+      type: "N:1"
+      foreign_key: "operation_record_id"
+
+# ============================================
+# 第四阶段：代码使用设计
+# ============================================
+code_patterns:
+  # Controller层规范
+  controller:
+    annotations:
+      - "@Tag(name = '管理后台 - MES 生产追溯') - Swagger接口文档标签"
+      - "@RestController - RESTful控制器"
+      - "@RequestMapping('/mes/trace') - 请求路径前缀"
+      - "@PreAuthorize('@ss.hasPermission('mes:trace:query')') - 权限控制"
+      - "@Validated - 参数校验"
+    example: |
+      @Tag(name = "管理后台 - MES 生产追溯")
+      @RestController
+      @RequestMapping("/mes/trace")
+      @Validated
+      public class MesTraceController {
+
+          @GetMapping("/vin")
+          @Operation(summary = "VIN 正向追溯查询")
+          @Parameter(name = "vin", description = "VIN码", required = true)
+          @PreAuthorize("@ss.hasPermission('mes:trace:query')")
+          public CommonResult<MesVinTraceRespVO> traceByVin(@RequestParam("vin") String vin) {
+              return success(traceService.traceByVin(vin));
+          }
+      }
+
+  # Service层规范
+  service:
+    interface_pattern: |
+      public interface MesTraceService {
+          MesVinTraceRespVO traceByVin(String vin);
+          MesPartTraceRespVO traceByPartSn(String partSn);
+          MesOperationRecordDetailRespVO getOperationDetail(Long recordId);
+          PageResult<MesOperatorRecordRespVO> getOperatorRecords(MesOperatorRecordPageReqVO reqVO);
+          PageResult<MesDeviceDataRespVO> getDeviceData(MesDeviceDataPageReqVO reqVO);
+      }
+
+    impl_pattern: |
+      @Service
+      @Validated
+      public class MesTraceServiceImpl implements MesTraceService {
+
+          @Resource
+          private MesOperationRecordMapper operationRecordMapper;
+          @Resource
+          private MesKeyPartBindMapper keyPartBindMapper;
+          @Resource
+          private MesDeviceDataMapper deviceDataMapper;
+
+          @Override
+          public MesVinTraceRespVO traceByVin(String vin) {
+              // 1. 校验 VIN 格式
+              validateVinFormat(vin);
+              // 2. 查询作业记录（永久保存）
+              List<MesOperationRecordDO> operationRecords = operationRecordMapper.selectListByVin(vin);
+              // 3. 查询关键件绑定
+              List<MesKeyPartBindDO> keyParts = keyPartBindMapper.selectListByVin(vin);
+              // 4. 构建追溯响应
+              return buildVinTraceResp(vin, operationRecords, keyParts);
+          }
+      }
+
+  # 数据访问规范
+  dal:
+    mapper_pattern: |
+      @Mapper
+      public interface MesOperationRecordMapper extends BaseMapperX<MesOperationRecordDO> {
+
+          default List<MesOperationRecordDO> selectListByVin(String vin) {
+              return selectList(new LambdaQueryWrapperX<MesOperationRecordDO>()
+                      .eq(MesOperationRecordDO::getVin, vin)
+                      .orderByAsc(MesOperationRecordDO::getStartTime));
+          }
+
+          default PageResult<MesOperationRecordDO> selectPage(MesOperatorRecordPageReqVO reqVO) {
+              return selectPage(reqVO, new LambdaQueryWrapperX<MesOperationRecordDO>()
+                      .eqIfPresent(MesOperationRecordDO::getOperatorId, reqVO.getOperatorId())
+                      .betweenIfPresent(MesOperationRecordDO::getStartTime, reqVO.getStartTime())
+                      .orderByDesc(MesOperationRecordDO::getId));
+          }
+      }
+
+  # 异常处理
+  error_handling:
+    code_prefix: "1-040-xxx-xxx"
+    examples:
+      - code: "1_040_001_000"
+        message: "VIN追溯信息不存在"
+        constant: "TRACE_VIN_NOT_FOUND"
+      - code: "1_040_001_001"
+        message: "关键件追溯信息不存在"
+        constant: "TRACE_KEY_PART_NOT_FOUND"
+      - code: "1_040_002_000"
+        message: "不支持的扫码类型"
+        constant: "SCAN_CODE_TYPE_NOT_SUPPORTED"
+      - code: "1_040_002_002"
+        message: "无该工位操作权限"
+        constant: "SCAN_WORKSTATION_PERMISSION_DENIED"
+      - code: "1_040_003_002"
+        message: "关键件【{}】未绑定"
+        constant: "OPERATION_KEY_PART_NOT_BOUND"
+
+  # 统一响应
+  response:
+    success_pattern: "CommonResult.success(data)"
+    error_pattern: "throw exception(ERROR_CODE, args...)"
+
+# ============================================
+# 第五阶段：扩展指南
+# ============================================
+extension_guide:
+  # 新增功能步骤
+  new_feature:
+    title: "新增追溯查询类型"
+    steps:
+      - step: "1. 定义响应 VO"
+        detail: "在 controller/admin/trace/vo/ 下创建响应 VO 类"
+
+      - step: "2. 添加 Service 方法"
+        detail: "在 MesTraceService 接口和实现类中添加查询方法"
+
+      - step: "3. 添加 Controller 接口"
+        detail: "在 MesTraceController 中添加 REST 接口"
+
+      - step: "4. 添加权限配置"
+        detail: "在 sys_menu 表中添加权限配置"
+
+  # 最佳实践
+  best_practices:
+    - practice: "追溯数据永久保存"
+      description: |
+        追溯数据表不提供物理删除接口
+        deleted 字段仅用于逻辑删除标记
+        所有查询默认过滤 deleted=1 的记录
+
+    - practice: "VIN 追溯聚合查询"
+      description: |
+        使用单次查询聚合多表数据
+        避免 N+1 查询问题
+        使用 IN 查询批量获取关联数据
+
+    - practice: "关键件绑定校验"
+      description: |
+        完成作业前校验所有关键件已绑定
+        使用工序配置的关键件清单进行校验
+        返回未绑定的关键件名称提示
+
+# ============================================
+# 依赖关系
+# ============================================
+dependencies:
+  # 内部依赖
+  internal:
+    - module: "system"
+      api: "AdminUserApi"
+      purpose: "获取操作员信息，显示操作员姓名"
+
+  # 外部依赖
+  external:
+    - name: "Redis"
+      purpose: "离线作业缓存、Token 存储"
+    - name: "MyBatis-Plus"
+      purpose: "ORM 框架，简化数据库操作"
+
+# ============================================
+# 关键文件清单
+# ============================================
+key_files:
+  # 控制器
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/controller/admin/trace/MesTraceController.java"
+    purpose: "追溯查询接口"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/controller/app/MesMobileOperationController.java"
+    purpose: "移动端作业接口"
+
+  # 服务
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/service/trace/MesTraceService.java"
+    purpose: "追溯服务接口"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/service/operation/MesOperationService.java"
+    purpose: "作业服务接口"
+
+  # 数据访问
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/dataobject/trace/MesOperationRecordDO.java"
+    purpose: "作业记录实体"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/dal/mysql/trace/MesOperationRecordMapper.java"
+    purpose: "作业记录 Mapper"
+
+  # 枚举
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/enums/ErrorCodeConstants.java"
+    purpose: "错误码常量"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/enums/OperationStatusEnum.java"
+    purpose: "作业状态枚举"
+
+  - path: "yudao-module-mes/yudao-module-mes-biz/src/main/java/cn/iocoder/yudao/module/mes/enums/ScanTypeEnum.java"
+    purpose: "扫码类型枚举"

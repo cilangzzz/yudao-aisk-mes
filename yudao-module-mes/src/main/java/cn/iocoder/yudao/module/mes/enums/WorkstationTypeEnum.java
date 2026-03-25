@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.mes.enums;
 
-import cn.iocoder.yudao.framework.common.core.IntArrayValuable;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
