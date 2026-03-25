@@ -6,7 +6,10 @@
       "Bash(dir \"H:\\\\basePlatform\\\\yudao-aisk-mes\\\\skills\" /b)",
       "Read(//h/Documents/software-dev-ai-workflow/5.0-系统模型/**)",
       "Bash(__NEW_LINE_ec81d57a2064fbf7__ cat)",
-      "Bash(echo 'package cn.iocoder.yudao.module.mes.controller.admin.operation;:*)"
+      "Bash(echo 'package cn.iocoder.yudao.module.mes.controller.admin.operation;:*)",
+      "Bash(mvn compile -pl yudao-module-mes -am -q)",
+      "Bash(mvn compile -pl yudao-module-mes -DskipTests)",
+      "Read(//h/Documents/software-dev-ai-workflow/**)"
     ],
     "additionalDirectories": [
       "h:\\basePlatform\\yudao-aisk-mes\\doc",

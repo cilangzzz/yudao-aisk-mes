@@ -125,4 +125,14 @@ public interface ErrorCodeConstants {
     ErrorCode STOCK_NOT_ENOUGH = new ErrorCode(1_020_017_001, "库存不足，当前库存：{}，消耗数量：{}");
     ErrorCode STOCK_NEGATIVE_NOT_ALLOWED = new ErrorCode(1_020_017_002, "库存扣减后不能为负数");
 
+    // ========== 质量检验 1-020-018-xxx ==========
+    ErrorCode QUALITY_RECORD_NOT_EXISTS = new ErrorCode(1_020_018_000, "质量检验记录不存在");
+    ErrorCode QUALITY_RECORD_ALREADY_DEFECT = new ErrorCode(1_020_018_001, "该检验记录已登记不合格处理");
+
+    // ========== 不合格处理 1-020-019-xxx ==========
+    ErrorCode DEFECT_HANDLE_NOT_EXISTS = new ErrorCode(1_020_019_000, "不合格处理记录不存在");
+    ErrorCode DEFECT_HANDLE_STATUS_INVALID = new ErrorCode(1_020_019_001, "不合格处理状态不正确");
+    ErrorCode DEFECT_HANDLE_ALREADY_CLOSED = new ErrorCode(1_020_019_002, "不合格处理已闭环，无法操作");
+    ErrorCode FINAL_CHECK_FAILED_CANNOT_STORAGE = new ErrorCode(1_020_019_003, "终检不合格，不可入库");
+
 }
