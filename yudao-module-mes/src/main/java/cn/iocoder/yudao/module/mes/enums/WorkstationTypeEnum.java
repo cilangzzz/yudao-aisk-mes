@@ -11,7 +11,7 @@ import java.util.Arrays;
  */
 @Getter
 @AllArgsConstructor
-public enum WorkstationTypeEnum implements IntArrayValuable {
+public enum WorkstationTypeEnum {
 
     NORMAL(0, "普通工位"),
     KEY(1, "关键工位"),
@@ -28,9 +28,6 @@ public enum WorkstationTypeEnum implements IntArrayValuable {
      */
     private final String name;
 
-    @Override
-    public int[] array() {
-        return ARRAYS;
-    }
+
 
 }

@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.mes.controller.admin.workorder;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
@@ -87,7 +88,7 @@ public class MesWorkOrderController {
     @PreAuthorize("@ss.hasPermission('mes:work-order:export')")
     public void exportWorkOrderExcel(@Valid MesWorkOrderPageReqVO pageReqVO,
                                       HttpServletResponse response) throws IOException {
-        pageReqVO.setPageSize(PageResult.PAGE_SIZE_NONE);
+        pageReqVO.setPageSize(PageParam.PAGE_SIZE_NONE);
         List<MesWorkOrderDO> list = workOrderService.getWorkOrderList(pageReqVO);
         // 导出 Excel
         ExcelUtils.write(response, "生产工单.xls", "数据", MesWorkOrderRespVO.class,

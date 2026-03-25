@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.mes.controller.admin.product;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
@@ -96,7 +97,7 @@ public class ProductController {
     @PreAuthorize("@ss.hasPermission('mes:product:export')")
     public void exportProductExcel(@Valid ProductPageReqVO pageReqVO,
                                     HttpServletResponse response) throws IOException {
-        pageReqVO.setPageSize(PageResult.PAGE_SIZE_NONE);
+        pageReqVO.setPageSize(PageParam.PAGE_SIZE_NONE);
         List<ProductDO> list = productService.getProductList(pageReqVO);
         ExcelUtils.write(response, "产品.xls", "数据", ProductRespVO.class,
                 BeanUtils.toBean(list, ProductRespVO.class));

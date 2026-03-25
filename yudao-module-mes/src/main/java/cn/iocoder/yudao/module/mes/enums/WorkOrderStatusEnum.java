@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.mes.enums;
 
-import cn.iocoder.yudao.framework.common.core.IntArrayValuable;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -11,7 +11,7 @@ import java.util.Arrays;
  */
 @Getter
 @AllArgsConstructor
-public enum WorkOrderStatusEnum implements IntArrayValuable {
+public enum WorkOrderStatusEnum  {
 
     CREATED(0, "待下发"),
     RELEASED(1, "已下发"),
@@ -30,9 +30,5 @@ public enum WorkOrderStatusEnum implements IntArrayValuable {
      */
     private final String name;
 
-    @Override
-    public int[] array() {
-        return ARRAYS;
-    }
 
 }

@@ -10,7 +10,7 @@ import java.util.List;
  */
 @Schema(description = "移动端 - 扫码响应 VO")
 @Data
-public class MesScanRespVO {
+public class MesScanAppRespVO {
 
     @Schema(description = "扫码类型: VIN/WORK_ORDER/MATERIAL/KEY_PART")
     private String scanType;

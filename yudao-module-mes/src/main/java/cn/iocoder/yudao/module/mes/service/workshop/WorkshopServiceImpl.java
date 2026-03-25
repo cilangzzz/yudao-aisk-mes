@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.mes.service.workshop;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.mes.controller.admin.workshop.vo.WorkshopListReqVO;
 import cn.iocoder.yudao.module.mes.controller.admin.workshop.vo.WorkshopSaveReqVO;

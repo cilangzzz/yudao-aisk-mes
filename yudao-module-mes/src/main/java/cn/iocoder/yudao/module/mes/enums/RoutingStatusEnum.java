@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.mes.enums;
 
-import cn.iocoder.yudao.framework.common.core.IntArrayValuable;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -11,7 +11,7 @@ import java.util.Arrays;
  */
 @Getter
 @AllArgsConstructor
-public enum RoutingStatusEnum implements IntArrayValuable {
+public enum RoutingStatusEnum  {
 
     DRAFT(0, "草稿"),
     ACTIVE(1, "生效"),
@@ -28,9 +28,6 @@ public enum RoutingStatusEnum implements IntArrayValuable {
      */
     private final String name;
 
-    @Override
-    public int[] array() {
-        return ARRAYS;
-    }
+
 
 }

@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.mes.controller.admin.productionline;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
@@ -106,7 +107,7 @@ public class ProductionLineController {
     @PreAuthorize("@ss.hasPermission('mes:production-line:export')")
     public void exportProductionLineExcel(@Valid ProductionLinePageReqVO pageReqVO,
                                            HttpServletResponse response) throws IOException {
-        pageReqVO.setPageSize(PageResult.PAGE_SIZE_NONE);
+        pageReqVO.setPageSize(PageParam.PAGE_SIZE_NONE);
         List<ProductionLineDO> list = productionLineService.getProductionLineList(pageReqVO);
         ExcelUtils.write(response, "产线.xls", "数据", ProductionLineRespVO.class,
                 BeanUtils.toBean(list, ProductionLineRespVO.class));

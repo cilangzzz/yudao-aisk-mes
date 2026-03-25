@@ -1,6 +1,8 @@
 package cn.iocoder.yudao.module.mes.controller.app;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.module.mes.controller.admin.operation.vo.MesScanReqVO;
 import cn.iocoder.yudao.module.mes.controller.app.vo.*;
 import cn.iocoder.yudao.module.mes.service.operation.MesOperationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,7 +31,8 @@ public class MesMobileOperationController {
 
     @PostMapping("/operation/scan")
     @Operation(summary = "扫码解析")
-    public CommonResult<MesScanRespVO> scan(@Valid @RequestBody MesScanReqVO reqVO) {
+    public CommonResult<MesScanAppRespVO> scan(@Valid @RequestBody MesScanAPPReqVO reqAppVO) {
+        MesScanReqVO reqVO = BeanUtils.toBean(reqAppVO, MesScanReqVO.class);
         return success(operationService.scan(reqVO));
     }
 

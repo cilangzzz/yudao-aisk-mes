@@ -25,6 +25,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
@@ -154,7 +155,7 @@ public class WorkstationController {
         }
         WorkstationRespVO respVO = BeanUtils.toBean(workstation, WorkstationRespVO.class);
         // 解析设备ID列表
-        if (CollUtil.isNotEmpty(workstation.getEquipmentIds())) {
+        if (CollUtil.isNotEmpty(Collections.singleton(workstation.getEquipmentIds()))) {
             respVO.setEquipmentIds(JsonUtils.parseArray(workstation.getEquipmentIds(), Long.class));
         }
         return respVO;
@@ -165,7 +166,7 @@ public class WorkstationController {
         // 解析设备ID列表
         for (int i = 0; i < list.size(); i++) {
             WorkstationDO source = pageResult.getList().get(i);
-            if (CollUtil.isNotEmpty(source.getEquipmentIds())) {
+            if (CollUtil.isNotEmpty(Collections.singleton(source.getEquipmentIds()))) {
                 list.get(i).setEquipmentIds(JsonUtils.parseArray(source.getEquipmentIds(), Long.class));
             }
         }

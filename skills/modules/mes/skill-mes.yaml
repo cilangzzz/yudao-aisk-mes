@@ -1,0 +1,211 @@
+skill:
+  id: "skill-mes"
+  name: "MES Skill"
+  version: "1.0.0"
+  module_path: "yudao-module-mes"
+  created_at: "2026-03-25"
+  updated_at: "2026-03-25"
+
+# 第一阶段：设计理念
+philosophy:
+  business_position: "MES模块实现制造执行系统的核心功能，包括生产工单管理、装配作业执行、生产追溯等。"
+  design_principles:
+    - "工单状态机：待下发(0) -> 已下发(1) -> 生产中(2) -> 已完成(3) -> 已关闭(4)"
+    - "扫码识别模式：VIN码(17位) / 工单码(WO+14位) / 物料码"
+    - "作业记录唯一性：同一VIN同一工序只能有一条作业记录"
+    - "关键件追溯：关键件序列号全局唯一绑定"
+    - "前置工序校验：前置工序未完成不可执行后续工序"
+  domain_model:
+    aggregates:
+      - name: "生产工单"
+        type: "聚合根"
+        entities:
+          - "作业记录"
+          - "关键件绑定"
+        description: "生产域核心聚合，管理工单生命周期和作业执行"
+      - name: "装配作业"
+        type: "聚合根"
+        entities:
+          - "作业记录"
+          - "关键件绑定"
+        description: "作业执行域核心聚合，管理装配作业执行过程"
+
+# 第二阶段：架构设计
+architecture:
+  layers:
+    - name: "controller"
+      path: "controller/admin"
+      description: "REST API 控制器层"
+    - name: "service"
+      path: "service"
+      description: "业务逻辑服务层"
+    - name: "dal"
+      path: "dal"
+      description: "数据访问层"
+  design_patterns:
+    - pattern: "状态机模式"
+      usage: "工单状态流转控制"
+    - pattern: "策略模式"
+      usage: "扫码识别策略（VIN/工单/物料）"
+    - pattern: "模板方法模式"
+      usage: "作业执行流程"
+  communication:
+    apis:
+      - path: "/mes/work-order"
+        description: "工单管理 API"
+      - path: "/mes/operation"
+        description: "装配作业 API"
+    consumers: []
+
+# 第三阶段：数据表设计
+data_model:
+  entity_hierarchy:
+    base: "TenantBaseDO"
+    description: "所有实体继承租户基类，支持多租户"
+  tables:
+    - name: "mes_work_order"
+      comment: "生产工单表"
+      entity: "MesWorkOrderDO"
+      extends: "TenantBaseDO"
+      columns:
+        - { name: "id", type: "BIGINT", comment: "主键ID" }
+        - { name: "order_no", type: "VARCHAR(64)", comment: "工单编号" }
+        - { name: "product_id", type: "BIGINT", comment: "产品ID" }
+        - { name: "plan_qty", type: "INT", comment: "计划数量" }
+        - { name: "actual_qty", type: "INT", comment: "实际数量" }
+        - { name: "status", type: "TINYINT", comment: "状态" }
+        - { name: "routing_id", type: "BIGINT", comment: "工艺路线ID" }
+        - { name: "line_id", type: "BIGINT", comment: "产线ID" }
+    - name: "mes_operation_record"
+      comment: "作业记录表"
+      entity: "MesOperationRecordDO"
+      extends: "TenantBaseDO"
+      columns:
+        - { name: "id", type: "BIGINT", comment: "主键ID" }
+        - { name: "work_order_id", type: "BIGINT", comment: "工单ID" }
+        - { name: "vin", type: "VARCHAR(64)", comment: "VIN码" }
+        - { name: "operation_id", type: "BIGINT", comment: "工序ID" }
+        - { name: "workstation_id", type: "BIGINT", comment: "工作站ID" }
+        - { name: "status", type: "TINYINT", comment: "状态" }
+    - name: "mes_key_part_bind"
+      comment: "关键件绑定表"
+      entity: "MesKeyPartBindDO"
+      extends: "TenantBaseDO"
+      columns:
+        - { name: "id", type: "BIGINT", comment: "主键ID" }
+        - { name: "work_order_id", type: "BIGINT", comment: "工单ID" }
+        - { name: "vin", type: "VARCHAR(64)", comment: "VIN码" }
+        - { name: "part_code", type: "VARCHAR(64)", comment: "零部件编码" }
+        - { name: "part_sn", type: "VARCHAR(128)", comment: "零部件序列号" }
+  relationships:
+    - from: "mes_work_order"
+      to: "mes_operation_record"
+      type: "one-to-many"
+      foreign_key: "work_order_id"
+    - from: "mes_operation_record"
+      to: "mes_key_part_bind"
+      type: "one-to-many"
+      foreign_key: "operation_record_id"
+
+# 第四阶段：代码使用设计
+code_patterns:
+  controller:
+    annotations:
+      - "@Tag(name = \"管理后台 - XXX\")"
+      - "@RestController"
+      - "@RequestMapping(\"/mes/xxx\")"
+      - "@PreAuthorize(\"@ss.hasPermission('mes:xxx:xxx')\")"
+    example: |
+      @Tag(name = "管理后台 - 生产工单")
+      @RestController
+      @RequestMapping("/mes/work-order")
+      @Validated
+      public class MesWorkOrderController {
+          @PostMapping("/create")
+          @Operation(summary = "创建生产工单")
+          @PreAuthorize("@ss.hasPermission('mes:work-order:create')")
+          public CommonResult<Long> createWorkOrder(@Valid @RequestBody MesWorkOrderSaveReqVO createReqVO) {
+              return success(workOrderService.createWorkOrder(createReqVO));
+          }
+      }
+  service:
+    interface_pattern: "XxxService.java"
+    impl_pattern: "XxxServiceImpl.java"
+    example: |
+      @Service
+      @Validated
+      public class MesWorkOrderServiceImpl implements MesWorkOrderService {
+          @Override
+          public Long createWorkOrder(MesWorkOrderSaveReqVO createReqVO) {
+              // 1. 校验数据
+              // 2. 生成工单编号
+              // 3. 插入数据
+              // 4. 返回ID
+          }
+      }
+  dal:
+    mapper_pattern: "XxxMapper extends BaseMapperX<XxxDO>"
+    example: |
+      @Mapper
+      public interface MesWorkOrderMapper extends BaseMapperX<MesWorkOrderDO> {
+          default PageResult<MesWorkOrderDO> selectPage(MesWorkOrderPageReqVO reqVO) {
+              return selectPage(reqVO, new LambdaQueryWrapperX<MesWorkOrderDO>()
+                      .likeIfPresent(MesWorkOrderDO::getOrderNo, reqVO.getOrderNo())
+                      .eqIfPresent(MesWorkOrderDO::getStatus, reqVO.getStatus())
+                      .orderByDesc(MesWorkOrderDO::getId));
+          }
+      }
+  error_handling:
+    code_prefix: "1-020-xxx-xxx"
+    examples:
+      - code: "1_020_008_000"
+        message: "生产工单不存在"
+      - code: "1_020_011_000"
+        message: "作业记录不存在"
+
+# 第五阶段：扩展指南
+extension_guide:
+  new_feature:
+    title: "新增功能"
+    steps:
+      - "1. 在 enums/ErrorCodeConstants.java 中添加错误码"
+      - "2. 在 dal/dataobject/ 下创建实体类"
+      - "3. 在 dal/mysql/ 下创建 Mapper 接口"
+      - "4. 在 controller/admin/xxx/vo/ 下创建 VO 类"
+      - "5. 在 service/xxx/ 下创建 Service 接口和实现"
+      - "6. 在 controller/admin/xxx/ 下创建 Controller"
+  best_practices:
+    - "状态流转必须使用状态机模式，避免非法状态转换"
+    - "扫码识别使用策略模式，便于扩展新的码类型"
+    - "VIN码必须校验格式（17位字母数字组合）"
+    - "关键件序列号必须全局唯一"
+
+# 依赖关系
+dependencies:
+  internal:
+    - "yudao-module-system"
+    - "yudao-framework"
+  external: []
+
+# 关键文件清单
+key_files:
+  - path: "dal/dataobject/workorder/MesWorkOrderDO.java"
+    description: "生产工单实体类"
+  - path: "dal/dataobject/operation/MesOperationRecordDO.java"
+    description: "作业记录实体类"
+  - path: "dal/dataobject/operation/MesKeyPartBindDO.java"
+    description: "关键件绑定实体类"
+  - path: "service/workorder/MesWorkOrderServiceImpl.java"
+    description: "工单管理服务实现"
+  - path: "service/operation/MesOperationServiceImpl.java"
+    description: "装配作业服务实现"
+  - path: "controller/admin/workorder/MesWorkOrderController.java"
+    description: "工单管理控制器"
+  - path: "controller/admin/operation/MesOperationController.java"
+    description: "装配作业控制器"
+  - path: "enums/WorkOrderStatusEnum.java"
+    description: "工单状态枚举"
+  - path: "enums/OperationStatusEnum.java"
+    description: "作业状态枚举"
+  - path: "enums/ScanTypeEnum.java"
+    description: "扫码类型枚举"

@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.mes.controller.admin.shift;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
@@ -87,7 +88,7 @@ public class ShiftController {
     @PreAuthorize("@ss.hasPermission('mes:shift:export')")
     public void exportShiftExcel(@Valid ShiftPageReqVO pageReqVO,
                                   HttpServletResponse response) throws IOException {
-        pageReqVO.setPageSize(PageResult.PAGE_SIZE_NONE);
+        pageReqVO.setPageSize(PageParam.PAGE_SIZE_NONE);
         List<ShiftDO> list = shiftService.getShiftList(pageReqVO);
         // 导出 Excel
         ExcelUtils.write(response, "班次.xls", "数据", ShiftRespVO.class,

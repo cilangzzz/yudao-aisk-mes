@@ -10,7 +10,7 @@ import javax.validation.constraints.NotBlank;
  */
 @Schema(description = "移动端 - 扫码请求 VO")
 @Data
-public class MesScanReqVO {
+public class MesScanAPPReqVO {
 
     @Schema(description = "扫码内容", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "扫码内容不能为空")

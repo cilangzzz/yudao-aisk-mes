@@ -1,6 +1,6 @@
 package cn.iocoder.yudao.module.mes.enums;
 
-import cn.iocoder.yudao.framework.common.core.IntArrayValuable;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -11,7 +11,7 @@ import java.util.Arrays;
  */
 @Getter
 @AllArgsConstructor
-public enum OperationStatusEnum implements IntArrayValuable {
+public enum OperationStatusEnum   {
 
     IN_PROGRESS(0, "进行中"),
     COMPLETED(1, "已完成"),
@@ -28,10 +28,6 @@ public enum OperationStatusEnum implements IntArrayValuable {
      */
     private final String name;
 
-    @Override
-    public int[] array() {
-        return ARRAYS;
-    }
 
     /**
      * 根据状态获取名称

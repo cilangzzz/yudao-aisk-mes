@@ -1,239 +1,239 @@
 package cn.iocoder.yudao.module.mes.service.operation;
 
-import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
-import cn.iocoder.yudao.module.mes.controller.app.vo.*;
+import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.module.mes.controller.admin.operation.vo.*;
 import cn.iocoder.yudao.module.mes.dal.dataobject.operation.MesKeyPartBindDO;
 import cn.iocoder.yudao.module.mes.dal.dataobject.operation.MesOperationRecordDO;
+import cn.iocoder.yudao.module.mes.dal.dataobject.workorder.MesWorkOrderDO;
 import cn.iocoder.yudao.module.mes.dal.mysql.operation.MesKeyPartBindMapper;
 import cn.iocoder.yudao.module.mes.dal.mysql.operation.MesOperationRecordMapper;
+import cn.iocoder.yudao.module.mes.dal.mysql.workorder.MesWorkOrderMapper;
 import cn.iocoder.yudao.module.mes.enums.OperationStatusEnum;
 import cn.iocoder.yudao.module.mes.enums.ScanTypeEnum;
-import lombok.extern.slf4j.Slf4j;
+import cn.iocoder.yudao.module.mes.enums.WorkOrderStatusEnum;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import javax.annotation.Resource;
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.mes.enums.ErrorCodeConstants.*;
 
-/**
- * MES 移动端作业 Service 实现类
- *
- * @author 芋道源码
- */
 @Service
 @Validated
-@Slf4j
 public class MesOperationServiceImpl implements MesOperationService {
 
     @Resource
     private MesOperationRecordMapper operationRecordMapper;
+
     @Resource
     private MesKeyPartBindMapper keyPartBindMapper;
 
+    @Resource
+    private MesWorkOrderMapper workOrderMapper;
+
     @Override
     public MesScanRespVO scan(MesScanReqVO reqVO) {
-        String scanCode = reqVO.getScanCode();
+        String code = reqVO.getCode();
+        ScanTypeEnum scanType = ScanTypeEnum.parse(code);
         MesScanRespVO respVO = new MesScanRespVO();
-
-        // 1. 解析扫码类型
-        ScanTypeEnum scanType = ScanTypeEnum.parse(scanCode);
-        if (scanType == null) {
-            respVO.setSuccess(false);
-            respVO.setFailReason("无法识别的码格式");
-            return respVO;
-        }
-
         respVO.setScanType(scanType.getType());
-        respVO.setSuccess(true);
+        respVO.setScanTypeName(scanType.getName());
 
-        // 2. 根据扫码类型处理
         switch (scanType) {
             case VIN:
-                return handleVinScan(scanCode, respVO);
+                respVO.setVinInfo(handleVinScan(code, reqVO.getWorkOrderId()));
+                respVO.setMessage("请选择工序开始作业");
+                break;
             case WORK_ORDER:
-                return handleWorkOrderScan(scanCode, respVO);
+                respVO.setWorkOrderInfo(handleWorkOrderScan(code));
+                respVO.setMessage("工单信息已加载");
+                break;
             case MATERIAL:
-                return handleMaterialScan(scanCode, respVO);
-            default:
-                respVO.setSuccess(false);
-                respVO.setFailReason("不支持的扫码类型");
-                return respVO;
+                respVO.setMaterialInfo(handleMaterialScan(code));
+                respVO.setMessage("物料信息已识别");
+                break;
         }
+        return respVO;
     }
+
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long startOperation(MesOperationStartReqVO reqVO) {
-        // 1. 校验是否已有进行中的作业
+        MesWorkOrderDO workOrder = workOrderMapper.selectById(reqVO.getWorkOrderId());
+        if (workOrder == null) {
+            throw exception(WORK_ORDER_NOT_EXISTS);
+        }
+        if (!WorkOrderStatusEnum.IN_PROGRESS.getStatus().equals(workOrder.getStatus())) {
+            throw exception(OPERATION_WORK_ORDER_NOT_PRODUCING);
+        }
+        if (!isValidVin(reqVO.getVin())) {
+            throw exception(SCAN_VIN_FORMAT_ERROR);
+        }
         MesOperationRecordDO existRecord = operationRecordMapper.selectByVinAndOperationId(
                 reqVO.getVin(), reqVO.getOperationId());
-        if (existRecord != null && OperationStatusEnum.IN_PROGRESS.getStatus().equals(existRecord.getStatus())) {
+        if (existRecord != null) {
             throw exception(OPERATION_RECORD_DUPLICATE);
         }
 
-        // 2. 创建作业记录
         MesOperationRecordDO record = new MesOperationRecordDO();
-        record.setVin(reqVO.getVin());
         record.setWorkOrderId(reqVO.getWorkOrderId());
+        record.setWorkOrderNo(workOrder.getOrderNo());
+        record.setVin(reqVO.getVin());
         record.setOperationId(reqVO.getOperationId());
+        record.setOperationCode("OP" + reqVO.getOperationId());
+        record.setOperationName("工序" + reqVO.getOperationId());
+        record.setOperationSeq(1);
         record.setWorkstationId(reqVO.getWorkstationId());
-        record.setStatus(OperationStatusEnum.IN_PROGRESS.getStatus());
         record.setStartTime(LocalDateTime.now());
-
-        // 设置操作员信息
-        Long userId = SecurityFrameworkUtils.getLoginUserId();
-        record.setOperatorId(userId);
+        record.setStatus(OperationStatusEnum.IN_PROGRESS.getStatus());
 
         operationRecordMapper.insert(record);
         return record.getId();
     }
 
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void completeOperation(MesOperationCompleteReqVO reqVO) {
-        // 1. 查询作业记录
-        MesOperationRecordDO record = operationRecordMapper.selectById(reqVO.getId());
+        MesOperationRecordDO record = operationRecordMapper.selectById(reqVO.getRecordId());
         if (record == null) {
             throw exception(OPERATION_RECORD_NOT_EXISTS);
         }
-
-        // 2. 校验是否可完成
         if (!OperationStatusEnum.IN_PROGRESS.getStatus().equals(record.getStatus())) {
             throw exception(OPERATION_RECORD_ALREADY_COMPLETED);
         }
 
-        // 3. TODO: 校验关键件是否全部绑定（MT-003）
-        // validateKeyPartsBound(record);
-
-        // 4. 更新作业记录
-        record.setStatus(OperationStatusEnum.COMPLETED.getStatus());
-        record.setResult(reqVO.getResult());
-        record.setEndTime(LocalDateTime.now());
-        record.setDuration(calculateDuration(record.getStartTime(), record.getEndTime()));
-        record.setTorqueValue(reqVO.getTorqueValue());
-        record.setRemark(reqVO.getRemark());
-
-        operationRecordMapper.updateById(record);
+        LocalDateTime endTime = LocalDateTime.now();
+        MesOperationRecordDO updateObj = new MesOperationRecordDO();
+        updateObj.setId(reqVO.getRecordId());
+        updateObj.setEndTime(endTime);
+        updateObj.setDuration((int) Duration.between(record.getStartTime(), endTime).getSeconds());
+        updateObj.setStatus(OperationStatusEnum.COMPLETED.getStatus());
+        updateObj.setResult(reqVO.getResult());
+        updateObj.setTorqueValue(reqVO.getTorqueValue());
+        updateObj.setTorqueResult(reqVO.getTorqueResult());
+        updateObj.setRemark(reqVO.getRemark());
+        operationRecordMapper.updateById(updateObj);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void bindKeyPart(MesKeyPartBindReqVO reqVO) {
-        // 1. 校验关键件是否已绑定
-        MesKeyPartBindDO existBind = keyPartBindMapper.selectByPartSn(reqVO.getPartSn());
-        if (existBind != null) {
+    public Long bindKeyPart(MesKeyPartBindReqVO reqVO) {
+        if (keyPartBindMapper.isPartSnBind(reqVO.getPartSn())) {
             throw exception(KEY_PART_ALREADY_BIND);
         }
-
-        // 2. 创建绑定记录
-        MesKeyPartBindDO bind = new MesKeyPartBindDO();
-        bind.setWorkOrderId(reqVO.getWorkOrderId());
-        bind.setOperationRecordId(reqVO.getOperationRecordId());
-        bind.setVin(reqVO.getVin());
-        bind.setPartCode(reqVO.getPartCode());
-        bind.setPartName(reqVO.getPartName());
-        bind.setPartSn(reqVO.getPartSn());
-        bind.setSupplierCode(reqVO.getSupplierCode());
-        bind.setSupplierName(reqVO.getSupplierName());
-        bind.setWorkstationId(reqVO.getWorkstationId());
+        MesKeyPartBindDO bind = BeanUtils.toBean(reqVO, MesKeyPartBindDO.class);
         bind.setBindTime(LocalDateTime.now());
-
-        // 设置操作员信息
-        Long userId = SecurityFrameworkUtils.getLoginUserId();
-        bind.setOperatorId(userId);
-
         keyPartBindMapper.insert(bind);
+        return bind.getId();
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void reportException(MesExceptionReportReqVO reqVO) {
-        // 1. 校验异常原因不能为空（MT-004）
-        if (reqVO.getExceptionReason() == null || reqVO.getExceptionReason().trim().isEmpty()) {
-            throw exception(EXCEPTION_REASON_REQUIRED);
-        }
-
-        // 2. 查询当前作业记录
-        MesOperationRecordDO record = operationRecordMapper.selectByVinAndOperationId(
-                reqVO.getVin(), reqVO.getOperationId());
-        if (record == null) {
-            // 如果没有作业记录，创建一个异常记录
-            record = new MesOperationRecordDO();
-            record.setVin(reqVO.getVin());
-            record.setWorkOrderId(reqVO.getWorkOrderId());
-            record.setOperationId(reqVO.getOperationId());
-            record.setWorkstationId(reqVO.getWorkstationId());
-            record.setStatus(OperationStatusEnum.ABNORMAL.getStatus());
-            record.setStartTime(LocalDateTime.now());
-            record.setRemark("异常上报: " + reqVO.getExceptionReason());
-
-            Long userId = SecurityFrameworkUtils.getLoginUserId();
-            record.setOperatorId(userId);
-
-            operationRecordMapper.insert(record);
-        } else {
-            // 更新状态为异常
-            record.setStatus(OperationStatusEnum.ABNORMAL.getStatus());
-            record.setRemark("异常上报: " + reqVO.getExceptionReason());
-            operationRecordMapper.updateById(record);
-        }
-
-        log.info("异常上报成功: VIN={}, 工单ID={}, 异常原因={}",
-                reqVO.getVin(), reqVO.getWorkOrderId(), reqVO.getExceptionReason());
+    public PageResult<MesOperationRecordDO> getOperationRecordPage(MesOperationRecordPageReqVO pageReqVO) {
+        return operationRecordMapper.selectPage(pageReqVO);
     }
 
-    // ==================== 私有方法 ====================
+    @Override
+    public MesOperationRecordDO getOperationRecord(Long id) {
+        return operationRecordMapper.selectById(id);
+    }
 
-    private MesScanRespVO handleVinScan(String vin, MesScanRespVO respVO) {
+
+    @Override
+    public MesVehicleProgressRespVO getVehicleProgress(String vin) {
+        MesVehicleProgressRespVO respVO = new MesVehicleProgressRespVO();
         respVO.setVin(vin);
-
-        // 查询该 VIN 的作业记录
         List<MesOperationRecordDO> records = operationRecordMapper.selectListByVin(vin);
-        if (!records.isEmpty()) {
-            // 获取最新一条作业记录
-            MesOperationRecordDO latestRecord = records.get(records.size() - 1);
-            respVO.setWorkOrderId(latestRecord.getWorkOrderId());
-            respVO.setWorkOrderNo(latestRecord.getWorkOrderNo());
 
-            // 构建当前工序信息
-            MesScanRespVO.CurrentOperationVO operationVO = new MesScanRespVO.CurrentOperationVO();
-            operationVO.setOperationId(latestRecord.getOperationId());
-            operationVO.setOperationCode(latestRecord.getOperationCode());
-            operationVO.setOperationName(latestRecord.getOperationName());
-            respVO.setCurrentOperation(operationVO);
+        int completedCount = 0;
+        List<MesVehicleProgressRespVO.OperationProgress> operations = new ArrayList<>();
+
+        for (MesOperationRecordDO record : records) {
+            MesVehicleProgressRespVO.OperationProgress progress = new MesVehicleProgressRespVO.OperationProgress();
+            progress.setOperationId(record.getOperationId());
+            progress.setOperationCode(record.getOperationCode());
+            progress.setOperationName(record.getOperationName());
+            progress.setOperationSeq(record.getOperationSeq());
+            progress.setRecordId(record.getId());
+            progress.setStatus(record.getStatus());
+            progress.setStatusName(OperationStatusEnum.getNameByStatus(record.getStatus()));
+            progress.setCompleted(OperationStatusEnum.COMPLETED.getStatus().equals(record.getStatus()));
+            operations.add(progress);
+            if (progress.getCompleted()) {
+                completedCount++;
+            }
         }
 
-        // 查询已绑定关键件
-        List<MesKeyPartBindDO> boundParts = keyPartBindMapper.selectListByVin(vin);
-        respVO.setBoundParts(cn.iocoder.yudao.framework.common.util.object.BeanUtils.toBean(
-                boundParts, MesScanRespVO.BoundPartVO.class));
-
-        return respVO;
-    }
-
-    private MesScanRespVO handleWorkOrderScan(String workOrderNo, MesScanRespVO respVO) {
-        respVO.setWorkOrderNo(workOrderNo);
-        // TODO: 查询工单信息并返回
-        return respVO;
-    }
-
-    private MesScanRespVO handleMaterialScan(String materialCode, MesScanRespVO respVO) {
-        // TODO: 处理物料扫码
-        return respVO;
-    }
-
-    private Integer calculateDuration(LocalDateTime startTime, LocalDateTime endTime) {
-        if (startTime == null || endTime == null) {
-            return null;
+        respVO.setOperations(operations);
+        respVO.setCompletedCount(completedCount);
+        respVO.setTotalCount(operations.size());
+        if (operations.size() > 0) {
+            respVO.setProgressPercent((completedCount * 100.0) / operations.size());
         }
-        long seconds = java.time.Duration.between(startTime, endTime).getSeconds();
-        return (int) seconds;
+        return respVO;
     }
 
+    @Override
+    public List<MesKeyPartBindDO> getKeyPartBindListByVin(String vin) {
+        return keyPartBindMapper.selectListByVin(vin);
+    }
+
+
+    private MesScanRespVO.VinInfo handleVinScan(String vin, Long workOrderId) {
+        MesScanRespVO.VinInfo vinInfo = new MesScanRespVO.VinInfo();
+        vinInfo.setVin(vin);
+        List<MesOperationRecordDO> records = operationRecordMapper.selectListByVin(vin);
+
+        List<MesScanRespVO.OperationInfo> operations = new ArrayList<>();
+        for (MesOperationRecordDO record : records) {
+            MesScanRespVO.OperationInfo opInfo = new MesScanRespVO.OperationInfo();
+            opInfo.setOperationId(record.getOperationId());
+            opInfo.setOperationCode(record.getOperationCode());
+            opInfo.setOperationName(record.getOperationName());
+            opInfo.setOperationSeq(record.getOperationSeq());
+            opInfo.setRecordId(record.getId());
+            opInfo.setStatus(record.getStatus());
+            opInfo.setCompleted(OperationStatusEnum.COMPLETED.getStatus().equals(record.getStatus()));
+            operations.add(opInfo);
+        }
+        vinInfo.setOperations(operations);
+        return vinInfo;
+    }
+
+    private MesScanRespVO.WorkOrderInfo handleWorkOrderScan(String code) {
+        MesWorkOrderDO workOrder = workOrderMapper.selectByOrderNo(code);
+        if (workOrder == null) {
+            throw exception(SCAN_WORK_ORDER_NOT_FOUND);
+        }
+        MesScanRespVO.WorkOrderInfo info = new MesScanRespVO.WorkOrderInfo();
+        info.setId(workOrder.getId());
+        info.setOrderNo(workOrder.getOrderNo());
+        info.setProductName(workOrder.getProductName());
+        info.setStatus(workOrder.getStatus());
+        info.setStatusName(WorkOrderStatusEnum.valueOf(workOrder.getStatus()).getName());
+        return info;
+    }
+
+    private MesScanRespVO.MaterialInfo handleMaterialScan(String code) {
+        MesScanRespVO.MaterialInfo info = new MesScanRespVO.MaterialInfo();
+        info.setPartCode(code);
+        info.setPartSn(code);
+        info.setBinded(keyPartBindMapper.isPartSnBind(code));
+        return info;
+    }
+
+    private boolean isValidVin(String vin) {
+        if (vin == null || vin.length() \!= 17) {
+            return false;
+        }
+        return vin.matches("^[A-Za-z0-9]+$");
+    }
 }
