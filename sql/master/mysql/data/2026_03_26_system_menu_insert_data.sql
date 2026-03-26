@@ -1,5 +1,5 @@
 -- ============================================
--- 文件名：mes.sql
+-- 文件名：2026_03_26_system_menu_insert_data.sql
 -- 描述：MES 模块初始数据（菜单权限）
 -- 作者：admin
 -- 日期：2026-03-25
@@ -19,7 +19,7 @@ SET @baseParentId = LAST_INSERT_ID();
 
 -- ========== 车间管理菜单 ==========
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
-VALUES ('车间管理', '', 2, 1, @baseParentId, 'workshop', 'ep:office-building', 'mes/base/workshop/index', 'MesWorkshop', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
+VALUES ('车间管理', '', 2, 1, @baseParentId, 'workshop', 'ep:office-building', 'mes/basic/workshop/index', 'MesWorkshop', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
 
 SET @workshopMenuId = LAST_INSERT_ID();
 
@@ -33,7 +33,7 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 
 -- ========== 产线管理菜单 ==========
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
-VALUES ('产线管理', '', 2, 2, @baseParentId, 'production-line', 'ep:data-line', 'mes/base/productionLine/index', 'MesProductionLine', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
+VALUES ('产线管理', '', 2, 2, @baseParentId, 'production-line', 'ep:data-line', 'mes/basic/prdline/index', 'MesProductionLine', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
 
 SET @lineMenuId = LAST_INSERT_ID();
 
@@ -47,7 +47,7 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 
 -- ========== 班组管理菜单 ==========
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
-VALUES ('班组管理', '', 2, 3, @baseParentId, 'team', 'ep:avatar', 'mes/base/team/index', 'MesTeam', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
+VALUES ('班组管理', '', 2, 3, @baseParentId, 'team', 'ep:avatar', 'mes/basic/team/index', 'MesTeam', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
 
 SET @teamMenuId = LAST_INSERT_ID();
 
@@ -60,7 +60,7 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 
 -- ========== 班次管理菜单 ==========
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
-VALUES ('班次管理', '', 2, 4, @baseParentId, 'shift', 'ep:timer', 'mes/base/shift/index', 'MesShift', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
+VALUES ('班次管理', '', 2, 4, @baseParentId, 'shift', 'ep:timer', 'mes/basic/shift/index', 'MesShift', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
 
 SET @shiftMenuId = LAST_INSERT_ID();
 
@@ -74,7 +74,7 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 
 -- ========== 产品管理菜单 ==========
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
-VALUES ('产品管理', '', 2, 5, @baseParentId, 'product', 'ep:goods', 'mes/base/product/index', 'MesProduct', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
+VALUES ('产品管理', '', 2, 5, @baseParentId, 'product', 'ep:goods', 'mes/basic/product/index', 'MesProduct', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
 
 SET @productMenuId = LAST_INSERT_ID();
 
@@ -88,7 +88,7 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 
 -- ========== 产品BOM管理菜单 ==========
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
-VALUES ('产品BOM', '', 2, 6, @baseParentId, 'product-bom', 'ep:list', 'mes/base/productBom/index', 'MesProductBom', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
+VALUES ('产品BOM', '', 2, 6, @baseParentId, 'product-bom', 'ep:list', 'mes/basic/bom/index', 'MesProductBom', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
 
 SET @productBomMenuId = LAST_INSERT_ID();
 
@@ -101,7 +101,7 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 
 -- ========== 工作站管理菜单 ==========
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
-VALUES ('工作站管理', '', 2, 7, @baseParentId, 'workstation', 'ep:monitor', 'mes/base/workstation/index', 'MesWorkstation', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
+VALUES ('工作站管理', '', 2, 7, @baseParentId, 'workstation', 'ep:monitor', 'mes/config/workstation/index', 'MesWorkstation', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
 
 SET @workstationMenuId = LAST_INSERT_ID();
 
