@@ -1,5 +1,5 @@
 -- ============================================
--- 文件名：2026_03_27_system_menu_insert_data.sql
+-- 文件名：2026_03_27_system_menu_insert_mes_data.sql
 -- 描述：MES 模块补充菜单数据（config, mobile, operation, stock, trace, workorder）
 -- 作者：admin
 -- 日期：2026-03-27
