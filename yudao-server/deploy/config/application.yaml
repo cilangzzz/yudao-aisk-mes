@@ -1,0 +1,108 @@
+# ========================================
+# Yudao MES Server 外部配置文件模板
+# ========================================
+# 使用说明：
+# 1. 将此文件复制到部署目录的 config/ 目录下
+# 2. 根据实际环境修改数据库、Redis 等配置
+# 3. 启动时 Spring Boot 会自动加载 ./config/ 目录下的配置
+# ========================================
+
+spring:
+  application:
+    name: yudao-server
+
+  profiles:
+    active: prod  # 修改为实际环境: local/dev/prod
+
+  main:
+    allow-circular-references: true
+
+  # Servlet 配置
+  servlet:
+    multipart:
+      max-file-size: 16MB
+      max-request-size: 32MB
+
+  # Jackson 配置项
+  jackson:
+    serialization:
+      write-dates-as-timestamps: true
+      write-date-timestamps-as-nanoseconds: false
+      write-durations-as-timestamps: true
+      fail-on-empty-beans: false
+
+  # ==================== 数据库配置 ====================
+  # 【必须修改】根据实际数据库配置
+  datasource:
+    dynamic: # 多数据源配置
+      strict: false
+      datasource:
+        master:
+          name: ruoyi-vue-pro
+          url: jdbc:mysql://127.0.0.1:3306/ruoyi-vue-pro?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+          username: root
+          password: 123456  # 【必须修改】
+
+  # ==================== Redis 配置 ====================
+  # 【必须修改】根据实际 Redis 配置
+  data:
+    redis:
+      host: 127.0.0.1  # 【必须修改】
+      port: 6379
+      database: 1
+      password:  # 【必须修改】如有密码则填写
+
+# ==================== 服务器配置 ====================
+server:
+  port: 48080  # 【可选修改】服务端口
+
+# ==================== MyBatis Plus 配置 ====================
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: NONE
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+    banner: false
+  type-aliases-package: ${yudao.info.base-package}.module.*.dal.dataobject
+
+# ==================== 验证码配置 ====================
+aj:
+  captcha:
+    cache-type: redis
+    type: blockPuzzle
+
+# ==================== 芋道配置 ====================
+yudao:
+  info:
+    version: 1.0.0
+    base-package: cn.iocoder.yudao
+  web:
+    admin-ui:
+      url: http://localhost:48080
+  xss:
+    enable: false
+  security:
+    permit-all_urls:
+      - /admin-api/mp/open/**
+  api-encrypt:
+    enable: false  # 生产环境建议开启
+  websocket:
+    enable: true
+    path: /infra/ws
+    sender-type: local
+  tenant:
+    enable: true
+    ignore-urls:
+      - /jmreport/*
+    ignore-visit-urls:
+      - /admin-api/system/user/profile/**
+      - /admin-api/system/auth/**
+
+# ==================== 日志配置 ====================
+logging:
+  level:
+    root: INFO
+    cn.iocoder.yudao: DEBUG

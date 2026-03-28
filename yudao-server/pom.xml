@@ -138,6 +138,17 @@
     <build>
         <!-- 设置构建的 jar 包名 -->
         <finalName>${project.artifactId}</finalName>
+        <!-- 排除环境特定配置文件，保留 application.yaml 和 application-local.yaml 用于本地开发 -->
+        <!-- 生产环境使用外部 config/ 目录配置覆盖 -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <excludes>
+                    <exclude>application-dev.yaml</exclude>
+                    <exclude>application-prod.yaml</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <plugins>
             <!-- 打包 -->
             <plugin>
