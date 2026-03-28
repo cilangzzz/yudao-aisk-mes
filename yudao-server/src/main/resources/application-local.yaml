@@ -163,7 +163,10 @@ spring:
         password: admin
       # Spring Boot Admin Server 服务端的相关配置
       context-path: /admin # 配置 Spring
-
+# 输出日志
+mybatis-plus:
+  configuration:
+      log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 # 日志文件配置
 logging:
   file:
