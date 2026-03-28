@@ -8,9 +8,11 @@ import cn.iocoder.yudao.module.mes.controller.admin.routing.vo.MesOperationRespV
 import cn.iocoder.yudao.module.mes.controller.admin.routing.vo.MesRoutingPageReqVO;
 import cn.iocoder.yudao.module.mes.controller.admin.routing.vo.MesRoutingRespVO;
 import cn.iocoder.yudao.module.mes.controller.admin.routing.vo.MesRoutingSaveReqVO;
+import cn.iocoder.yudao.module.mes.controller.admin.routing.vo.MesRoutingSimpleRespVO;
 import cn.iocoder.yudao.module.mes.dal.dataobject.routing.MesOperationDO;
 import cn.iocoder.yudao.module.mes.dal.dataobject.routing.MesOperationMaterialDO;
 import cn.iocoder.yudao.module.mes.dal.dataobject.routing.MesRoutingDO;
+import cn.iocoder.yudao.module.mes.enums.RoutingStatusEnum;
 import cn.iocoder.yudao.module.mes.service.routing.MesRoutingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -100,6 +102,13 @@ public class MesRoutingController {
     @PreAuthorize("@ss.hasPermission('mes:routing:create')")
     public CommonResult<Long> copyRouting(@RequestParam("id") Long id) {
         return success(routingService.copyRouting(id));
+    }
+
+    @GetMapping(value = {"/list-all-simple", "/simple-list"})
+    @Operation(summary = "获得工艺路线精简信息列表", description = "只包含生效的工艺路线，主要用于前端的下拉选项")
+    public CommonResult<List<MesRoutingSimpleRespVO>> getSimpleRoutingList() {
+        List<MesRoutingDO> list = routingService.getRoutingList(RoutingStatusEnum.ACTIVE.getStatus());
+        return success(BeanUtils.toBean(list, MesRoutingSimpleRespVO.class));
     }
 
     /**

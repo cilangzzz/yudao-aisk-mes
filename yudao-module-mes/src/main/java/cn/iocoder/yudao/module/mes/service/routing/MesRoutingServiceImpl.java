@@ -218,6 +218,14 @@ public class MesRoutingServiceImpl implements MesRoutingService {
         return null;
     }
 
+    @Override
+    public List<MesRoutingDO> getRoutingList(Integer status) {
+        if (status == null) {
+            return routingMapper.selectList();
+        }
+        return routingMapper.selectListByStatus(status);
+    }
+
     /**
      * 创建工序和物料
      */

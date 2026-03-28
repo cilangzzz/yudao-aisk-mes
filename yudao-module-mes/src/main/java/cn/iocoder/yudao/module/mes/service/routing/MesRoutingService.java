@@ -91,4 +91,12 @@ public interface MesRoutingService {
      */
     MesRoutingDO getActiveRoutingByProductId(Long productId);
 
+    /**
+     * 获得工艺路线列表（按状态）
+     *
+     * @param status 状态（可选，null 表示全部）
+     * @return 工艺路线列表
+     */
+    List<MesRoutingDO> getRoutingList(Integer status);
+
 }
