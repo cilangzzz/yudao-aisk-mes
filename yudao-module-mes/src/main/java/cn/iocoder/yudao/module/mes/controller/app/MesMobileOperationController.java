@@ -39,6 +39,7 @@ public class MesMobileOperationController {
     @Operation(summary = "扫码解析")
     public CommonResult<MesScanAppRespVO> scan(@Valid @RequestBody MesScanAPPReqVO reqAppVO) {
         MesScanReqVO reqVO = BeanUtils.toBean(reqAppVO, MesScanReqVO.class);
+        reqVO.setCode(reqAppVO.getScanCode());
         MesScanRespVO respVO = operationService.scan(reqVO);
         return success(BeanUtils.toBean(respVO, MesScanAppRespVO.class));
     }
