@@ -80,7 +80,8 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 ('库存查询', 'mes:stock:query', 3, 1, @stockMenuId, '', '', '', '', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0'),
 ('库存入库', 'mes:stock:in', 3, 2, @stockMenuId, '', '', '', '', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0'),
 ('库存消耗', 'mes:stock:consume', 3, 3, @stockMenuId, '', '', '', '', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0'),
-('库存预警', 'mes:stock:warning', 3, 4, @stockMenuId, '', '', '', '', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
+('库存预警', 'mes:stock:warning', 3, 4, @stockMenuId, '', '', '', '', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0'),
+('库存操作', 'mes:stock:update', 3, 5, @stockMenuId, '', '', '', '', 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0');
 
 -- ========== 质量追溯菜单 ==========
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
