@@ -69,6 +69,8 @@ CREATE TABLE `mes_operation_material` (
     `key_part` TINYINT NOT NULL DEFAULT 0 COMMENT '是否关键件:0-否,1-是',
     `creator` VARCHAR(64) DEFAULT '' COMMENT '创建者',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updater` VARCHAR(64) DEFAULT '' COMMENT '更新者',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted` BIT(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
     PRIMARY KEY (`id`),
     KEY `idx_tenant_operation` (`tenant_id`, `operation_id`)

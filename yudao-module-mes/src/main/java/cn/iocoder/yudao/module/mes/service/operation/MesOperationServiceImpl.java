@@ -3,11 +3,13 @@ package cn.iocoder.yudao.module.mes.service.operation;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.mes.controller.admin.operation.vo.*;
+import cn.iocoder.yudao.module.mes.dal.dataobject.routing.MesOperationDO;
 import cn.iocoder.yudao.module.mes.dal.dataobject.operation.MesKeyPartBindDO;
 import cn.iocoder.yudao.module.mes.dal.dataobject.operation.MesOperationRecordDO;
 import cn.iocoder.yudao.module.mes.dal.dataobject.workorder.MesWorkOrderDO;
 import cn.iocoder.yudao.module.mes.dal.mysql.operation.MesKeyPartBindMapper;
 import cn.iocoder.yudao.module.mes.dal.mysql.operation.MesOperationRecordMapper;
+import cn.iocoder.yudao.module.mes.dal.mysql.routing.MesOperationMapper;
 import cn.iocoder.yudao.module.mes.dal.mysql.workorder.MesWorkOrderMapper;
 import cn.iocoder.yudao.module.mes.enums.OperationStatusEnum;
 import cn.iocoder.yudao.module.mes.enums.ScanTypeEnum;
@@ -21,6 +23,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.mes.enums.ErrorCodeConstants.*;
@@ -37,6 +41,9 @@ public class MesOperationServiceImpl implements MesOperationService {
 
     @Resource
     private MesWorkOrderMapper workOrderMapper;
+
+    @Resource
+    private MesOperationMapper operationMapper;
 
     @Override
     public MesScanRespVO scan(MesScanReqVO reqVO) {
@@ -242,6 +249,35 @@ public class MesOperationServiceImpl implements MesOperationService {
         info.setStatus(workOrder.getStatus());
         WorkOrderStatusEnum statusEnum = WorkOrderStatusEnum.getByStatus(workOrder.getStatus());
         info.setStatusName(statusEnum != null ? statusEnum.getName() : "未知");
+
+        // 查询工序列表
+        if (workOrder.getRoutingId() != null) {
+            List<MesOperationDO> operationList = operationMapper.selectListByRoutingId(workOrder.getRoutingId());
+            // 查询工单的作业记录
+            List<MesOperationRecordDO> recordList = operationRecordMapper.selectListByWorkOrderId(workOrder.getId());
+            // 构建 operationId -> record 的映射
+            Map<Long, MesOperationRecordDO> recordMap = recordList.stream()
+                    .collect(Collectors.toMap(MesOperationRecordDO::getOperationId, r -> r, (a, b) -> a));
+
+            List<MesScanRespVO.OperationInfo> operations = new ArrayList<>();
+            for (MesOperationDO operation : operationList) {
+                MesScanRespVO.OperationInfo opInfo = new MesScanRespVO.OperationInfo();
+                opInfo.setOperationId(operation.getId());
+                opInfo.setOperationCode(operation.getOperationCode());
+                opInfo.setOperationName(operation.getOperationName());
+                opInfo.setOperationSeq(operation.getSequence());
+                MesOperationRecordDO record = recordMap.get(operation.getId());
+                if (record != null) {
+                    opInfo.setRecordId(record.getId());
+                    opInfo.setStatus(record.getStatus());
+                    opInfo.setCompleted(OperationStatusEnum.COMPLETED.getStatus().equals(record.getStatus()));
+                } else {
+                    opInfo.setCompleted(false);
+                }
+                operations.add(opInfo);
+            }
+            info.setOperations(operations);
+        }
         return info;
     }
 

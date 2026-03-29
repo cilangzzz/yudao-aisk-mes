@@ -84,6 +84,9 @@ public class MesScanRespVO {
 
         @Schema(description = "状态名称", example = "生产中")
         private String statusName;
+
+        @Schema(description = "工序列表")
+        private List<OperationInfo> operations;
     }
 
     @Data

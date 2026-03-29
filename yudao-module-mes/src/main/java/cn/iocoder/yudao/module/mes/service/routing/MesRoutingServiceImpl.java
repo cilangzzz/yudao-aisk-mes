@@ -72,11 +72,9 @@ public class MesRoutingServiceImpl implements MesRoutingService {
         // 4. 更新主表
         MesRoutingDO updateObj = BeanUtils.toBean(updateReqVO, MesRoutingDO.class);
         routingMapper.updateById(updateObj);
-        // 5. 删除旧的工序和物料
-        deleteOperationsByRoutingId(updateReqVO.getId());
-        // 6. 插入新的工序和物料
+        // 5. 保存工序和物料（区分新增和更新）
         if (updateReqVO.getOperations() != null && !updateReqVO.getOperations().isEmpty()) {
-            createOperations(updateReqVO.getId(), updateReqVO.getOperations());
+            saveOperations(updateReqVO.getId(), updateReqVO.getOperations());
         }
     }
 
@@ -227,20 +225,125 @@ public class MesRoutingServiceImpl implements MesRoutingService {
     }
 
     /**
-     * 创建工序和物料
+     * 创建工序和物料（用于新增工艺路线）
      */
     private void createOperations(Long routingId, List<MesOperationSaveReqVO> operations) {
         for (MesOperationSaveReqVO operationVO : operations) {
             MesOperationDO operation = BeanUtils.toBean(operationVO, MesOperationDO.class);
+            operation.setId(null); // 新增时清除 id
             operation.setRoutingId(routingId);
             operationMapper.insert(operation);
             // 创建物料
             if (operationVO.getMaterials() != null && !operationVO.getMaterials().isEmpty()) {
                 for (MesOperationMaterialSaveReqVO materialVO : operationVO.getMaterials()) {
                     MesOperationMaterialDO material = BeanUtils.toBean(materialVO, MesOperationMaterialDO.class);
+                    material.setId(null); // 新增时清除 id
                     material.setOperationId(operation.getId());
                     operationMaterialMapper.insert(material);
                 }
+            }
+        }
+    }
+
+    /**
+     * 保存工序和物料（用于更新工艺路线，区分新增和更新）
+     */
+    private void saveOperations(Long routingId, List<MesOperationSaveReqVO> operations) {
+        // 获取现有工序的 id 列表
+        List<MesOperationDO> existingOperations = operationMapper.selectListByRoutingId(routingId);
+        List<Long> existingIds = new ArrayList<>();
+        for (MesOperationDO op : existingOperations) {
+            existingIds.add(op.getId());
+        }
+
+        // 收集前端传来的有效 id
+        List<Long> providedIds = new ArrayList<>();
+        for (MesOperationSaveReqVO opVO : operations) {
+            if (opVO.getId() != null) {
+                providedIds.add(opVO.getId());
+            }
+        }
+
+        // 删除不在前端列表中的旧工序（及其物料）
+        for (Long existingId : existingIds) {
+            if (!providedIds.contains(existingId)) {
+                // 删除该工序的物料
+                operationMaterialMapper.deleteByOperationId(existingId);
+                // 删除工序
+                operationMapper.deleteById(existingId);
+            }
+        }
+
+        // 保存工序（有 id 更新，无 id 新增）
+        for (MesOperationSaveReqVO operationVO : operations) {
+            MesOperationDO operation = BeanUtils.toBean(operationVO, MesOperationDO.class);
+            operation.setRoutingId(routingId);
+
+            if (operationVO.getId() != null) {
+                // 更新现有工序
+                operationMapper.updateById(operation);
+                // 保存物料（区分新增和更新）
+                saveMaterials(operationVO.getId(), operationVO.getMaterials());
+            } else {
+                // 新增工序
+                operationMapper.insert(operation);
+                // 新增物料
+                if (operationVO.getMaterials() != null && !operationVO.getMaterials().isEmpty()) {
+                    for (MesOperationMaterialSaveReqVO materialVO : operationVO.getMaterials()) {
+                        MesOperationMaterialDO material = BeanUtils.toBean(materialVO, MesOperationMaterialDO.class);
+                        material.setId(null);
+                        material.setOperationId(operation.getId());
+                        operationMaterialMapper.insert(material);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 保存物料（用于更新工序，区分新增和更新）
+     */
+    private void saveMaterials(Long operationId, List<MesOperationMaterialSaveReqVO> materials) {
+        if (materials == null || materials.isEmpty()) {
+            // 没有物料则删除所有现有物料
+            operationMaterialMapper.deleteByOperationId(operationId);
+            return;
+        }
+
+        // 获取现有物料
+        List<MesOperationMaterialDO> existingMaterials = operationMaterialMapper.selectListByOperationId(operationId);
+        List<Long> existingIds = new ArrayList<>();
+        for (MesOperationMaterialDO mat : existingMaterials) {
+            existingIds.add(mat.getId());
+        }
+
+        // 收集前端传来的有效 id
+        List<Long> providedIds = new ArrayList<>();
+        for (MesOperationMaterialSaveReqVO matVO : materials) {
+            if (matVO.getId() != null) {
+                providedIds.add(matVO.getId());
+            }
+        }
+
+        // 删除不在前端列表中的旧物料
+        for (Long existingId : existingIds) {
+            if (!providedIds.contains(existingId)) {
+                operationMaterialMapper.deleteById(existingId);
+            }
+        }
+
+        // 保存物料（有 id 更新，无 id 新增）
+        for (MesOperationMaterialSaveReqVO materialVO : materials) {
+            MesOperationMaterialDO material = BeanUtils.toBean(materialVO, MesOperationMaterialDO.class);
+            material.setOperationId(operationId);
+
+            if (materialVO.getId() != null) {
+                // 更新现有物料
+                operationMaterialMapper.updateById(material);
+            } else {
+                // 新增物料
+                material.setId(null);
+                operationMaterialMapper.insert(material);
             }
         }
     }
