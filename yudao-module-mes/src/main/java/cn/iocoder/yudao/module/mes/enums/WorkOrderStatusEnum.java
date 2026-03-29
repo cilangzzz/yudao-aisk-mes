@@ -30,5 +30,16 @@ public enum WorkOrderStatusEnum  {
      */
     private final String name;
 
+    /**
+     * 根据状态值获取枚举
+     */
+    public static WorkOrderStatusEnum getByStatus(Integer status) {
+        for (WorkOrderStatusEnum e : values()) {
+            if (e.getStatus().equals(status)) {
+                return e;
+            }
+        }
+        return null;
+    }
 
 }

@@ -240,7 +240,8 @@ public class MesOperationServiceImpl implements MesOperationService {
         info.setOrderNo(workOrder.getOrderNo());
         info.setProductName(workOrder.getProductName());
         info.setStatus(workOrder.getStatus());
-        info.setStatusName(WorkOrderStatusEnum.valueOf(String.valueOf(workOrder.getStatus())).getName());
+        WorkOrderStatusEnum statusEnum = WorkOrderStatusEnum.getByStatus(workOrder.getStatus());
+        info.setStatusName(statusEnum != null ? statusEnum.getName() : "未知");
         return info;
     }
 
