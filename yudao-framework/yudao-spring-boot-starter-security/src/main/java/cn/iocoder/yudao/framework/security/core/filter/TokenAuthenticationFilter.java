@@ -4,6 +4,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.biz.system.oauth2.OAuth2TokenCommonApi;
 import cn.iocoder.yudao.framework.common.biz.system.oauth2.dto.OAuth2AccessTokenCheckRespDTO;
+import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
@@ -77,8 +78,11 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
             // 用户类型不匹配，无权限
             // 注意：只有 /admin-api/* 和 /app-api/* 有 userType，才需要比对用户类型
             // 类似 WebSocket 的 /ws/* 连接地址，是不需要比对用户类型的
+            // 管理员忽略
             if (userType != null
-                    && ObjectUtil.notEqual(accessToken.getUserType(), userType)) {
+                    && ObjectUtil.notEqual(accessToken.getUserType(), userType)
+                    && ObjectUtil.notEqual(accessToken.getUserType(), UserTypeEnum.ADMIN.getValue())
+            ) {
                 throw new AccessDeniedException("错误的用户类型");
             }
             // 构建登录用户
